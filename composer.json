@@ -1,0 +1,28 @@
+{
+    "description": "Development tooling for Lunar Image Converter.",
+    "license": "GPL-2.0-or-later",
+    "type": "project",
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "phpunit/phpunit": "^10.5",
+        "wp-coding-standards/wpcs": "^3.4"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "platform": {
+            "php": "8.1.0"
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "lint:php": "phpcs",
+        "lint:php:fix": "phpcbf",
+        "test": "phpunit"
+    }
+}
