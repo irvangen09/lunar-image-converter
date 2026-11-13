@@ -8,6 +8,10 @@
 namespace LunarImageConverter\Core;
 
 use LunarImageConverter\Admin\SettingsPage;
+use LunarImageConverter\Conversion\Converter;
+use LunarImageConverter\Conversion\Pipeline;
+use LunarImageConverter\Conversion\UploadHandler;
+use LunarImageConverter\Conversion\WpGateway;
 use LunarImageConverter\Settings\Settings;
 use LunarImageConverter\Support\Environment;
 
@@ -22,22 +26,32 @@ final class Plugin {
 
 	private SettingsPage $settings_page;
 
+	private UploadHandler $upload_handler;
+
 	/**
-	 * @param Settings     $settings      Plugin settings.
-	 * @param SettingsPage $settings_page Settings page under Media.
+	 * @param Settings      $settings       Plugin settings.
+	 * @param SettingsPage  $settings_page  Settings page under Media.
+	 * @param UploadHandler $upload_handler Converts images on upload.
 	 */
-	public function __construct( Settings $settings, SettingsPage $settings_page ) {
-		$this->settings      = $settings;
-		$this->settings_page = $settings_page;
+	public function __construct( Settings $settings, SettingsPage $settings_page, UploadHandler $upload_handler ) {
+		$this->settings       = $settings;
+		$this->settings_page  = $settings_page;
+		$this->upload_handler = $upload_handler;
 	}
 
 	/**
 	 * Builds the plugin with its components.
 	 */
 	public static function create(): self {
-		$settings = new Settings();
+		$settings    = new Settings();
+		$environment = new Environment();
+		$pipeline    = new Pipeline( new Converter(), new WpGateway(), $environment );
 
-		return new self( $settings, new SettingsPage( $settings, new Environment() ) );
+		return new self(
+			$settings,
+			new SettingsPage( $settings, $environment ),
+			new UploadHandler( $settings, $pipeline )
+		);
 	}
 
 	/**
@@ -45,6 +59,9 @@ final class Plugin {
 	 */
 	public function register(): void {
 		add_action( 'init', array( $this->settings, 'register' ) );
+
+		// Uploads also arrive through the REST API, so this is not limited to the admin.
+		$this->upload_handler->register();
 
 		if ( is_admin() ) {
 			$this->settings_page->register();

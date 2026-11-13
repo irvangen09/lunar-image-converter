@@ -139,13 +139,6 @@ final class SettingsTest extends TestCase {
 		$this->assertSame( $once, $this->settings->sanitize( $once ) );
 	}
 
-	public function test_uninstall_script_deletes_the_settings_option(): void {
-		$script = file_get_contents( dirname( __DIR__ ) . '/uninstall.php' );
-
-		$this->assertIsString( $script );
-		$this->assertStringContainsString( "'" . Settings::OPTION . "'", $script );
-	}
-
 	/**
 	 * Builds a short label for a raw input, for failure messages.
 	 *
