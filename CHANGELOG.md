@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Settings page under Media > Image Converter, with a server support check for WebP and AVIF.
+- Settings are saved but not applied yet: image conversion is not part of this version.
+
 ## [0.1.0] - 2026-11-12
 
 ### Added

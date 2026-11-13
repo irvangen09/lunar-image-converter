@@ -10,9 +10,12 @@
     "npm": ">=11.0.0"
   },
   "scripts": {
+    "lint:css": "wp-scripts lint-style \"assets/css/**/*.css\"",
+    "lint:js": "wp-scripts lint-js assets/js",
     "plugin-zip": "wp-scripts plugin-zip"
   },
   "files": [
+    "assets",
     "includes",
     "lunar-image-converter.php",
     "uninstall.php",

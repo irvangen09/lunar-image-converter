@@ -1,0 +1,39 @@
+.lic-page .lic-status {
+	margin: 0 0 1em;
+	padding: 0;
+	list-style: none;
+}
+
+.lic-page .lic-status li {
+	margin: 0 0 0.5em;
+}
+
+.lic-page .lic-status__state {
+	font-weight: 600;
+}
+
+.lic-page .lic-status__state--ok {
+	color: #007017;
+}
+
+.lic-page .lic-status__state--no {
+	color: #b32d2e;
+}
+
+.lic-page .lic-warning {
+	margin: 0 0 1em;
+	color: #b32d2e;
+	font-weight: 600;
+}
+
+.lic-page .lic-quality {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+}
+
+.lic-page .lic-quality__range {
+	width: 200px;
+	max-width: 100%;
+}

@@ -1,7 +1,8 @@
 <?php
 /**
  * Plugin Name:       Lunar Image Converter
- * Description:       Converts JPEG and PNG images to WebP or AVIF on upload and replaces the originals.
+ * Plugin URI:        https://github.com/irvangen09/lunar-image-converter
+ * Description:      Converts JPEG and PNG images to WebP or AVIF on upload and replaces the originals.
  * Version:           0.1.0
  * Requires at least: 7.0
  * Requires PHP:      8.1
@@ -19,6 +20,7 @@ define( 'LUNAR_IMAGE_CONVERTER_VERSION', '0.1.0' );
 define( 'LUNAR_IMAGE_CONVERTER_MIN_PHP', '8.1' );
 define( 'LUNAR_IMAGE_CONVERTER_MIN_WP', '7.0' );
 define( 'LUNAR_IMAGE_CONVERTER_PATH', plugin_dir_path( __FILE__ ) );
+define( 'LUNAR_IMAGE_CONVERTER_URL', plugin_dir_url( __FILE__ ) );
 
 /**
  * Returns the requirement that is not met: 'php', 'wp', or '' when all are met.
@@ -87,7 +89,7 @@ function lunar_image_converter_boot() {
 
 	( new \LunarImageConverter\Core\Autoloader( LUNAR_IMAGE_CONVERTER_PATH . 'includes/' ) )->register();
 
-	( new \LunarImageConverter\Core\Plugin( new \LunarImageConverter\Settings\Settings() ) )->register();
+	\LunarImageConverter\Core\Plugin::create()->register();
 
 	register_activation_hook( __FILE__, array( \LunarImageConverter\Core\Plugin::class, 'activate' ) );
 }
