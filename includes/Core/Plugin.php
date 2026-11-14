@@ -7,6 +7,8 @@
 
 namespace LunarImageConverter\Core;
 
+use LunarImageConverter\Admin\BulkController;
+use LunarImageConverter\Admin\BulkPanel;
 use LunarImageConverter\Admin\SettingsPage;
 use LunarImageConverter\Conversion\Converter;
 use LunarImageConverter\Conversion\Pipeline;
@@ -28,15 +30,19 @@ final class Plugin {
 
 	private UploadHandler $upload_handler;
 
+	private BulkController $bulk_controller;
+
 	/**
-	 * @param Settings      $settings       Plugin settings.
-	 * @param SettingsPage  $settings_page  Settings page under Media.
-	 * @param UploadHandler $upload_handler Converts images on upload.
+	 * @param Settings       $settings        Plugin settings.
+	 * @param SettingsPage   $settings_page   Settings page under Media.
+	 * @param UploadHandler  $upload_handler  Converts images on upload.
+	 * @param BulkController $bulk_controller Converts existing images on request.
 	 */
-	public function __construct( Settings $settings, SettingsPage $settings_page, UploadHandler $upload_handler ) {
-		$this->settings       = $settings;
-		$this->settings_page  = $settings_page;
-		$this->upload_handler = $upload_handler;
+	public function __construct( Settings $settings, SettingsPage $settings_page, UploadHandler $upload_handler, BulkController $bulk_controller ) {
+		$this->settings        = $settings;
+		$this->settings_page   = $settings_page;
+		$this->upload_handler  = $upload_handler;
+		$this->bulk_controller = $bulk_controller;
 	}
 
 	/**
@@ -45,12 +51,14 @@ final class Plugin {
 	public static function create(): self {
 		$settings    = new Settings();
 		$environment = new Environment();
-		$pipeline    = new Pipeline( new Converter(), new WpGateway(), $environment );
+		$gateway     = new WpGateway();
+		$pipeline    = new Pipeline( new Converter(), $gateway, $environment );
 
 		return new self(
 			$settings,
-			new SettingsPage( $settings, $environment ),
-			new UploadHandler( $settings, $pipeline )
+			new SettingsPage( $settings, $environment, new BulkPanel( $settings, $environment ) ),
+			new UploadHandler( $settings, $pipeline ),
+			new BulkController( $settings, $pipeline, $gateway, $environment )
 		);
 	}
 
@@ -65,6 +73,7 @@ final class Plugin {
 
 		if ( is_admin() ) {
 			$this->settings_page->register();
+			$this->bulk_controller->register();
 		}
 	}
 

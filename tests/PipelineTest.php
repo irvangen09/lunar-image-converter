@@ -59,6 +59,11 @@ final class PipelineTest extends TestCase {
 	 */
 	private array $garbage = array();
 
+	/**
+	 * Runs inside the encoder before each file is encoded.
+	 */
+	private ?\Closure $on_encode = null;
+
 	protected function setUp(): void {
 		$this->base = sys_get_temp_dir() . '/lic-pipeline-' . bin2hex( random_bytes( 4 ) );
 		$this->dir  = $this->base . '/2026/11';
@@ -485,6 +490,182 @@ final class PipelineTest extends TestCase {
 		$this->assertOnlyOriginalsRemain();
 	}
 
+	public function test_an_image_in_use_is_marked_as_processing_before_the_first_encode(): void {
+		$seen = array();
+
+		$this->on_encode = function () use ( &$seen ): void {
+			$seen[] = $this->gateway->status( 7 );
+		};
+
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$this->assertSame( array( 'processing', 'processing', 'processing' ), $seen );
+	}
+
+	public function test_a_new_upload_is_not_marked_as_processing(): void {
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS );
+
+		$this->assertSame( array( 'converted' ), $this->gateway->status_log[7] );
+	}
+
+	public function test_nothing_is_marked_as_processing_when_the_image_is_rejected_up_front(): void {
+		$this->gateway->megapixel_limit = 0.1;
+
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$this->assertSame( array( 'skipped' ), $this->gateway->status_log[7] );
+	}
+
+	public function test_processing_is_replaced_by_the_outcome_when_the_image_is_not_smaller(): void {
+		$this->ratio = 1.2;
+
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$this->assertSame( array( 'processing', 'skipped' ), $this->gateway->status_log[7] );
+		$this->assertOnlyOriginalsRemain();
+	}
+
+	public function test_urls_are_replaced_after_the_switch_and_before_any_old_file_is_deleted(): void {
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$replace = array_search( 'replace', $this->gateway->events, true );
+		$save    = array_search( 'save', $this->gateway->events, true );
+		$delete  = array_search( 'delete:photo.jpg', $this->gateway->events, true );
+
+		$this->assertIsInt( $replace );
+		$this->assertGreaterThan( $save, $replace );
+		$this->assertGreaterThan( $replace, $delete );
+	}
+
+	public function test_the_url_map_covers_every_file_including_the_original_and_editor_backups(): void {
+		$metadata                   = $this->attach( 7, 'photo-scaled.jpg' );
+		$metadata['original_image'] = 'photo.jpg';
+
+		$this->write( 'photo.jpg', 'image/jpeg', 3000 );
+		$this->write( 'photo-scaled-e1700000000.jpg', 'image/jpeg', 900 );
+		$this->write( 'photo-150x150-e1700000000.jpg', 'image/jpeg', 100 );
+
+		$this->gateway->backups[7] = array( 'photo-scaled-e1700000000.jpg', 'photo-150x150-e1700000000.jpg' );
+
+		$this->pipeline()->convert( 7, $metadata, Settings::DEFAULTS, true );
+
+		$this->assertSame(
+			$this->sorted(
+				array(
+					'2026/11/photo-scaled.jpg'             => '2026/11/photo-scaled.webp',
+					'2026/11/photo-scaled-150x150.jpg'     => '2026/11/photo-scaled-150x150.webp',
+					'2026/11/photo-scaled-300x240.jpg'     => '2026/11/photo-scaled-300x240.webp',
+					'2026/11/photo-scaled-e1700000000.jpg' => '2026/11/photo-scaled.webp',
+					'2026/11/photo-150x150-e1700000000.jpg' => '2026/11/photo-scaled.webp',
+					'2026/11/photo.jpg'                    => '2026/11/photo-scaled.webp',
+				)
+			),
+			$this->sorted( $this->gateway->replacements[0] )
+		);
+	}
+
+	public function test_editor_backups_are_deleted_and_forgotten_after_the_urls_are_replaced(): void {
+		$metadata = $this->attach( 7 );
+
+		$this->write( 'photo-e1700000000.jpg', 'image/jpeg', 900 );
+
+		$this->gateway->backups[7] = array( 'photo-e1700000000.jpg' );
+
+		$this->pipeline()->convert( 7, $metadata, Settings::DEFAULTS, true );
+
+		$this->assertFileDoesNotExist( $this->dir . '/photo-e1700000000.jpg' );
+		$this->assertContains( 'clear_backups', $this->gateway->events );
+		$this->assertSame( array(), $this->gateway->backups );
+	}
+
+	public function test_a_backup_file_that_is_missing_is_not_deleted_or_mapped(): void {
+		$this->gateway->backups[7] = array( 'gone-e1.jpg' );
+
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$this->assertNotContains( 'delete:gone-e1.jpg', $this->gateway->events );
+		$this->assertArrayNotHasKey( '2026/11/gone-e1.jpg', $this->gateway->replacements[0] );
+	}
+
+	public function test_old_files_and_backups_stay_when_the_urls_cannot_be_replaced(): void {
+		$metadata = $this->attach( 7 );
+
+		$this->write( 'photo-e1700000000.jpg', 'image/jpeg', 900 );
+
+		$this->gateway->backups[7]       = array( 'photo-e1700000000.jpg' );
+		$this->gateway->replace_succeeds = false;
+
+		$result = $this->pipeline()->convert( 7, $metadata, Settings::DEFAULTS, true );
+
+		foreach ( array( 'photo.jpg', 'photo-150x150.jpg', 'photo-300x240.jpg', 'photo-e1700000000.jpg' ) as $file ) {
+			$this->assertFileExists( $this->dir . '/' . $file );
+		}
+
+		$this->assertFileExists( $this->dir . '/photo.webp' );
+		$this->assertSame( '2026/11/photo.webp', $result['file'] );
+		$this->assertSame( 'converted', $this->gateway->records[7]['status'] );
+		$this->assertSame( 'old_files_kept', $this->gateway->records[7]['reason'] );
+		$this->assertSame( array( 'photo-e1700000000.jpg' ), $this->gateway->backups[7] );
+		$this->assertNotContains( 'clear_backups', $this->gateway->events );
+		$this->assertArrayNotHasKey( 7, $this->gateway->announced );
+	}
+
+	public function test_the_old_files_are_kept_marker_is_saved_before_the_content_is_touched(): void {
+		$this->gateway->replace_succeeds = false;
+
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$this->assertSame( array( 'processing', 'converted' ), $this->gateway->status_log[7] );
+	}
+
+	public function test_a_finished_conversion_leaves_no_old_files_kept_marker(): void {
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$this->assertSame( array( 'processing', 'converted', 'converted' ), $this->gateway->status_log[7] );
+		$this->assertSame( '', $this->gateway->records[7]['reason'] );
+		$this->assertGreaterThan( 0, $this->gateway->records[7]['saved'] );
+	}
+
+	public function test_a_new_upload_does_not_touch_content(): void {
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS );
+
+		$this->assertSame( array(), $this->gateway->replacements );
+	}
+
+	public function test_a_conversion_is_announced_with_the_same_map_that_was_used_for_the_content(): void {
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$this->assertSame( $this->gateway->replacements[0], $this->gateway->announced[7] );
+		$this->assertSame( '2026/11/photo.webp', $this->gateway->announced[7]['2026/11/photo.jpg'] );
+	}
+
+	public function test_a_new_upload_is_announced_too(): void {
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS );
+
+		$this->assertArrayHasKey( 7, $this->gateway->announced );
+	}
+
+	public function test_nothing_is_announced_when_the_image_is_not_converted(): void {
+		$this->ratio = 1.2;
+
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$this->assertSame( array(), $this->gateway->announced );
+		$this->assertSame( array(), $this->gateway->replacements );
+	}
+
+	public function test_an_image_without_dimensions_in_its_metadata_is_not_touched(): void {
+		$this->attach( 7 );
+
+		$result = $this->pipeline()->convert( 7, array(), Settings::DEFAULTS, true );
+
+		$this->assertSame( array(), $result );
+		$this->assertSame( 'failed', $this->gateway->records[7]['status'] );
+		$this->assertSame( 'no_metadata', $this->gateway->records[7]['reason'] );
+		$this->assertSame( 0, $this->encoded );
+		$this->assertOnlyOriginalsRemain();
+	}
+
 	/**
 	 * Creates the files of an attachment and returns its metadata.
 	 *
@@ -574,6 +755,10 @@ final class PipelineTest extends TestCase {
 			function ( string $source, string $destination, string $mime ): bool {
 				++$this->encoded;
 
+				if ( null !== $this->on_encode ) {
+					( $this->on_encode )();
+				}
+
 				$name = basename( $source );
 
 				if ( in_array( $name, $this->throwing, true ) ) {
@@ -604,5 +789,17 @@ final class PipelineTest extends TestCase {
 		foreach ( (array) glob( $this->dir . '/*' ) as $path ) {
 			$this->assertMatchesRegularExpression( '/\.(jpg|png)$/', $path, 'A converted file was left behind.' );
 		}
+	}
+
+	/**
+	 * Sorts an array by key, so a comparison does not depend on the order of the entries.
+	 *
+	 * @param array<string, string> $map Map to sort.
+	 * @return array<string, string>
+	 */
+	private function sorted( array $map ): array {
+		ksort( $map );
+
+		return $map;
 	}
 }

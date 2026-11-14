@@ -110,4 +110,74 @@ interface Gateway {
 	 * @param string $path Absolute path.
 	 */
 	public function delete( string $path ): void;
+
+	/**
+	 * Returns the saved attachment metadata, or an empty array when there is none.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return array<string, mixed>
+	 */
+	public function metadata( int $attachment_id ): array;
+
+	/**
+	 * Returns the saved reason code of an attachment, or an empty string.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function reason( int $attachment_id ): string;
+
+	/**
+	 * Returns the bytes saved by the conversion of an attachment.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function saved( int $attachment_id ): int;
+
+	/**
+	 * Returns the names of the files the image editor keeps so an edit can be undone.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return string[]
+	 */
+	public function backup_files( int $attachment_id ): array;
+
+	/**
+	 * Forgets the files the image editor keeps so an edit can be undone.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function clear_backups( int $attachment_id ): void;
+
+	/**
+	 * Replaces the URLs of old files by the URLs of their converted files in the post content.
+	 *
+	 * @param array<string, string> $path_map Old path => new path, both relative to the uploads directory.
+	 * @return bool Whether every place that needed it was updated.
+	 */
+	public function replace_urls( array $path_map ): bool;
+
+	/**
+	 * Tells other code that an attachment was converted.
+	 *
+	 * @param int                   $attachment_id Attachment ID.
+	 * @param array<string, string> $path_map      Old path => new path, both relative to the uploads directory.
+	 */
+	public function converted( int $attachment_id, array $path_map ): void;
+
+	/**
+	 * Returns the ID of the next attachment to convert after a given ID, or 0 when there is none.
+	 *
+	 * @param string[] $mimes Source MIME types to include.
+	 * @param string   $scope `retry` for skipped, failed and interrupted images, anything else for images never tried.
+	 * @param int      $after Only attachments with a higher ID are considered.
+	 */
+	public function next_attachment( array $mimes, string $scope, int $after ): int;
+
+	/**
+	 * Counts attachments by conversion state.
+	 *
+	 * @param string[] $mimes Source MIME types to include.
+	 * @return array<string, int> Counts for `pending`, `converted`, `skipped`, `failed` and `processing`.
+	 */
+	public function count_attachments( array $mimes ): array;
 }
