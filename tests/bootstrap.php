@@ -15,3 +15,5 @@ require_once dirname( __DIR__ ) . '/includes/Core/Autoloader.php';
 ( new \LunarImageConverter\Core\Autoloader( dirname( __DIR__ ) . '/includes/' ) )->register();
 
 require_once __DIR__ . '/FakeGateway.php';
+require_once __DIR__ . '/OptionStub.php';
+require_once __DIR__ . '/option-functions.php';

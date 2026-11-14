@@ -37,3 +37,40 @@
 	width: 200px;
 	max-width: 100%;
 }
+
+.lic-page .lic-bulk__buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.lic-page .lic-bulk__progress {
+	display: block;
+	width: 100%;
+	max-width: 480px;
+	margin: 0 0 1em;
+}
+
+.lic-page .lic-bulk__log {
+	max-height: 260px;
+	margin: 0;
+	padding: 8px 12px;
+	overflow-y: auto;
+	list-style: none;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 12px;
+}
+
+.lic-page .lic-bulk__log:empty {
+	display: none;
+}
+
+.lic-page .lic-bulk__log li {
+	margin: 0 0 4px;
+}
+
+.lic-page [hidden] {
+	display: none !important;
+}

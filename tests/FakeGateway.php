@@ -51,6 +51,50 @@ final class FakeGateway implements Gateway {
 		'avif' => 'image/avif',
 	);
 
+	/**
+	 * Metadata by attachment ID, as returned by metadata().
+	 *
+	 * @var array<int, array<string, mixed>>
+	 */
+	public array $metadata = array();
+
+	/**
+	 * File names kept by the image editor, by attachment ID.
+	 *
+	 * @var array<int, string[]>
+	 */
+	public array $backups = array();
+
+	/**
+	 * Path maps passed to replace_urls, in order.
+	 *
+	 * @var array<int, array<string, string>>
+	 */
+	public array $replacements = array();
+
+	/**
+	 * Path maps passed to converted, by attachment ID.
+	 *
+	 * @var array<int, array<string, string>>
+	 */
+	public array $announced = array();
+
+	/**
+	 * Every status recorded for an attachment, in order.
+	 *
+	 * @var array<int, string[]>
+	 */
+	public array $status_log = array();
+
+	/**
+	 * Attachment IDs whose metadata() call throws.
+	 *
+	 * @var int[]
+	 */
+	public array $throwing_metadata = array();
+
+	public bool $replace_succeeds = true;
+
 	public bool $switch_succeeds = true;
 
 	public bool $save_succeeds = true;
@@ -103,6 +147,7 @@ final class FakeGateway implements Gateway {
 			'saved'  => $saved_bytes,
 		);
 		$this->posts[ $attachment_id ]['status'] = $status;
+		$this->status_log[ $attachment_id ][]    = $status;
 	}
 
 	public function unique_name( string $dir, string $name ): string {
@@ -187,5 +232,84 @@ final class FakeGateway implements Gateway {
 		if ( is_file( $path ) ) {
 			unlink( $path );
 		}
+	}
+
+	public function metadata( int $attachment_id ): array {
+		if ( in_array( $attachment_id, $this->throwing_metadata, true ) ) {
+			throw new \RuntimeException( 'No metadata.' );
+		}
+
+		return $this->metadata[ $attachment_id ] ?? array();
+	}
+
+	public function reason( int $attachment_id ): string {
+		return $this->records[ $attachment_id ]['reason'] ?? '';
+	}
+
+	public function saved( int $attachment_id ): int {
+		return $this->records[ $attachment_id ]['saved'] ?? 0;
+	}
+
+	public function backup_files( int $attachment_id ): array {
+		return $this->backups[ $attachment_id ] ?? array();
+	}
+
+	public function clear_backups( int $attachment_id ): void {
+		$this->events[] = 'clear_backups';
+
+		unset( $this->backups[ $attachment_id ] );
+	}
+
+	public function replace_urls( array $path_map ): bool {
+		$this->events[]       = 'replace';
+		$this->replacements[] = $path_map;
+
+		return $this->replace_succeeds;
+	}
+
+	public function converted( int $attachment_id, array $path_map ): void {
+		$this->announced[ $attachment_id ] = $path_map;
+	}
+
+	public function next_attachment( array $mimes, string $scope, int $after ): int {
+		$ids = array_keys( $this->posts );
+
+		sort( $ids );
+
+		foreach ( $ids as $id ) {
+			$status = $this->posts[ $id ]['status'] ?? '';
+
+			if ( $id <= $after || ! in_array( $this->posts[ $id ]['mime'], $mimes, true ) ) {
+				continue;
+			}
+
+			if ( 'retry' === $scope ? in_array( $status, array( 'skipped', 'failed', 'processing' ), true ) : '' === $status ) {
+				return $id;
+			}
+		}
+
+		return 0;
+	}
+
+	public function count_attachments( array $mimes ): array {
+		$counts = array(
+			'pending'    => 0,
+			'converted'  => 0,
+			'skipped'    => 0,
+			'failed'     => 0,
+			'processing' => 0,
+		);
+
+		foreach ( $this->posts as $post ) {
+			$status = $post['status'] ?? '';
+
+			if ( 'converted' === $status ) {
+				++$counts['converted'];
+			} elseif ( in_array( $post['mime'], $mimes, true ) ) {
+				++$counts[ '' === $status ? 'pending' : $status ];
+			}
+		}
+
+		return $counts;
 	}
 }

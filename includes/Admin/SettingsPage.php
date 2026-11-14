@@ -23,15 +23,19 @@ final class SettingsPage {
 
 	private Environment $environment;
 
+	private BulkPanel $bulk_panel;
+
 	private string $hook_suffix = '';
 
 	/**
 	 * @param Settings    $settings    Plugin settings.
 	 * @param Environment $environment Server support for the output formats.
+	 * @param BulkPanel   $bulk_panel  Bulk conversion section.
 	 */
-	public function __construct( Settings $settings, Environment $environment ) {
+	public function __construct( Settings $settings, Environment $environment, BulkPanel $bulk_panel ) {
 		$this->settings    = $settings;
 		$this->environment = $environment;
+		$this->bulk_panel  = $bulk_panel;
 	}
 
 	/**
@@ -84,6 +88,8 @@ final class SettingsPage {
 				'strategy'  => 'defer',
 			)
 		);
+
+		$this->bulk_panel->enqueue();
 	}
 
 	/**
@@ -104,7 +110,7 @@ final class SettingsPage {
 			<div class="notice notice-warning inline">
 				<p>
 					<strong><?php esc_html_e( 'Warning:', 'lunar-image-converter' ); ?></strong>
-					<?php esc_html_e( 'Converted images replace the originals. The original files and their resized copies are deleted from the server, and this cannot be undone. Back up your uploads folder before converting images.', 'lunar-image-converter' ); ?>
+					<?php esc_html_e( 'Converted images replace the originals. The original files and their resized copies are deleted from the server, and this cannot be undone. Back up your uploads folder and your database before converting images.', 'lunar-image-converter' ); ?>
 				</p>
 			</div>
 
@@ -134,6 +140,8 @@ final class SettingsPage {
 				</table>
 				<?php submit_button(); ?>
 			</form>
+
+			<?php $this->bulk_panel->render(); ?>
 		</div>
 		<?php
 	}
