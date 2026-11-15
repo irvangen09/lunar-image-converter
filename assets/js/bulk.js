@@ -160,7 +160,7 @@
 
 	async function run( scope ) {
 		const total = SCOPE.retry === scope ? retryCount() : counts.pending;
-		const tally = { converted: 0, skipped: 0, failed: 0, saved: 0 };
+		const tally = { converted: 0, skipped: 0, failed: 0, saved: 0, alt: 0 };
 		let handled = 0;
 		let after = 0;
 
@@ -196,6 +196,10 @@
 					tally.skipped += 1;
 				}
 
+				if ( result.alt ) {
+					tally.alt += 1;
+				}
+
 				addLog( result );
 				progress.value = Math.min( handled, progress.max );
 				summary.textContent = format(
@@ -212,6 +216,11 @@
 				tally.failed,
 				formatBytes( tally.saved )
 			);
+
+			if ( tally.alt > 0 ) {
+				summary.textContent +=
+					' ' + format( data.text.altAdded, tally.alt );
+			}
 		} catch ( error ) {
 			summary.textContent = error.message;
 		}

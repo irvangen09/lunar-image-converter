@@ -9,6 +9,7 @@ namespace LunarImageConverter\Admin;
 
 use LunarImageConverter\Conversion\Gateway;
 use LunarImageConverter\Conversion\Pipeline;
+use LunarImageConverter\Media\AltText;
 use LunarImageConverter\Settings\Settings;
 use LunarImageConverter\Support\Environment;
 
@@ -49,17 +50,21 @@ final class BulkController {
 
 	private Environment $environment;
 
+	private AltText $alt_text;
+
 	/**
 	 * @param Settings    $settings    Plugin settings.
 	 * @param Pipeline    $pipeline    Conversion pipeline.
 	 * @param Gateway     $gateway     WordPress operations.
 	 * @param Environment $environment Server support for the output formats.
+	 * @param AltText     $alt_text    Fills empty alt text.
 	 */
-	public function __construct( Settings $settings, Pipeline $pipeline, Gateway $gateway, Environment $environment ) {
+	public function __construct( Settings $settings, Pipeline $pipeline, Gateway $gateway, Environment $environment, AltText $alt_text ) {
 		$this->settings    = $settings;
 		$this->pipeline    = $pipeline;
 		$this->gateway     = $gateway;
 		$this->environment = $environment;
+		$this->alt_text    = $alt_text;
 	}
 
 	/**
@@ -141,7 +146,8 @@ final class BulkController {
 			);
 		}
 
-		$name = basename( $this->gateway->relative_path( $id ) );
+		$name       = basename( $this->gateway->relative_path( $id ) );
+		$alt_filled = $this->fill_alt_text( $id, $name );
 
 		try {
 			$this->pipeline->convert( $id, $this->gateway->metadata( $id ), $settings, true );
@@ -157,7 +163,22 @@ final class BulkController {
 			'status' => $this->gateway->status( $id ),
 			'reason' => $this->gateway->reason( $id ),
 			'saved'  => $this->gateway->saved( $id ),
+			'alt'    => $alt_filled,
 		);
+	}
+
+	/**
+	 * Fills the alt text of an image from its file name, whatever happens to the image afterwards.
+	 *
+	 * @param int    $id   Attachment ID.
+	 * @param string $name File name before conversion.
+	 */
+	private function fill_alt_text( int $id, string $name ): bool {
+		try {
+			return $this->alt_text->fill( $id, $name );
+		} catch ( \Throwable ) {
+			return false;
+		}
 	}
 
 	/**

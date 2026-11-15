@@ -300,7 +300,7 @@ final class SettingsPage {
 
 		printf(
 			'<p class="description">%s</p>',
-			esc_html__( 'Alt text that is already set is never changed. File names that are not words, such as IMG_20260101_123456, are skipped.', 'lunar-image-converter' )
+			esc_html__( 'Alt text that is already set is never changed. File names that are not words, such as IMG_20260101_123456, are skipped. Applies to new uploads and to images processed by Convert existing images.', 'lunar-image-converter' )
 		);
 	}
 

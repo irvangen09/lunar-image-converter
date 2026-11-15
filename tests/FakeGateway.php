@@ -93,6 +93,15 @@ final class FakeGateway implements Gateway {
 	 */
 	public array $throwing_metadata = array();
 
+	/**
+	 * Alt text by attachment ID.
+	 *
+	 * @var array<int, string>
+	 */
+	public array $alt_texts = array();
+
+	public bool $throwing_alt_text = false;
+
 	public bool $replace_succeeds = true;
 
 	public bool $switch_succeeds = true;
@@ -311,5 +320,17 @@ final class FakeGateway implements Gateway {
 		}
 
 		return $counts;
+	}
+
+	public function alt_text( int $attachment_id ): string {
+		return $this->alt_texts[ $attachment_id ] ?? '';
+	}
+
+	public function set_alt_text( int $attachment_id, string $alt ): void {
+		if ( $this->throwing_alt_text ) {
+			throw new \RuntimeException( 'Cannot save alt text.' );
+		}
+
+		$this->alt_texts[ $attachment_id ] = $alt;
 	}
 }

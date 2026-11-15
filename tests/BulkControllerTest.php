@@ -10,6 +10,7 @@ namespace LunarImageConverter\Tests;
 use LunarImageConverter\Admin\BulkController;
 use LunarImageConverter\Conversion\Converter;
 use LunarImageConverter\Conversion\Pipeline;
+use LunarImageConverter\Media\AltText;
 use LunarImageConverter\Settings\Settings;
 use LunarImageConverter\Support\Environment;
 use PHPUnit\Framework\TestCase;
@@ -84,6 +85,7 @@ final class BulkControllerTest extends TestCase {
 				'status' => 'converted',
 				'reason' => '',
 				'saved'  => $this->gateway->records[3]['saved'],
+				'alt'    => false,
 			),
 			$result
 		);
@@ -247,6 +249,87 @@ final class BulkControllerTest extends TestCase {
 		$this->assertFileExists( $this->dir . '/photo.jpg' );
 	}
 
+	public function test_fills_empty_alt_text_from_the_file_name_when_the_setting_is_on(): void {
+		$this->values['auto_alt_text'] = true;
+
+		$this->add( 1, 'chibi-reference-sheet.jpg' );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertTrue( $result['alt'] );
+		$this->assertSame( 'chibi reference sheet', $this->gateway->alt_texts[1] );
+	}
+
+	public function test_fills_alt_text_even_when_the_image_is_skipped(): void {
+		$this->values['auto_alt_text'] = true;
+
+		$this->add( 1, 'sunset-beach.jpg' );
+
+		$result = $this->controller( 1.5 )->process_next( 'new', 0 );
+
+		$this->assertSame( 'skipped', $result['status'] );
+		$this->assertTrue( $result['alt'] );
+		$this->assertSame( 'sunset beach', $this->gateway->alt_texts[1] );
+	}
+
+	public function test_uses_the_name_from_before_the_conversion(): void {
+		$this->values['auto_alt_text'] = true;
+
+		$this->add( 1, 'old-harbour.jpg' );
+
+		$this->controller()->process_next( 'new', 0 );
+
+		$this->assertSame( 'old harbour', $this->gateway->alt_texts[1] );
+		$this->assertFileExists( $this->dir . '/old-harbour.webp' );
+	}
+
+	public function test_does_not_touch_alt_text_when_the_setting_is_off(): void {
+		$this->add( 1, 'sunset-beach.jpg' );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertFalse( $result['alt'] );
+		$this->assertSame( array(), $this->gateway->alt_texts );
+	}
+
+	public function test_keeps_alt_text_that_is_already_there(): void {
+		$this->values['auto_alt_text'] = true;
+
+		$this->add( 1, 'sunset-beach.jpg' );
+
+		$this->gateway->alt_texts[1] = 'A red sun over the sea';
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertFalse( $result['alt'] );
+		$this->assertSame( 'A red sun over the sea', $this->gateway->alt_texts[1] );
+	}
+
+	public function test_a_file_name_that_is_not_words_leaves_alt_text_empty(): void {
+		$this->values['auto_alt_text'] = true;
+
+		$this->add( 1, 'IMG_20260101_123456.jpg' );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertFalse( $result['alt'] );
+		$this->assertSame( 'converted', $result['status'] );
+		$this->assertSame( array(), $this->gateway->alt_texts );
+	}
+
+	public function test_a_problem_with_alt_text_does_not_stop_the_conversion(): void {
+		$this->values['auto_alt_text'] = true;
+
+		$this->add( 1, 'sunset-beach.jpg' );
+
+		$this->gateway->throwing_alt_text = true;
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertFalse( $result['alt'] );
+		$this->assertSame( 'converted', $result['status'] );
+	}
+
 	public function test_an_image_is_not_converted_twice(): void {
 		$this->add( 1, 'photo.jpg' );
 
@@ -366,6 +449,8 @@ final class BulkControllerTest extends TestCase {
 
 		OptionStub::$options[ Settings::OPTION ] = $this->values;
 
-		return new BulkController( new Settings(), new Pipeline( $converter, $this->gateway, $environment ), $this->gateway, $environment );
+		$settings = new Settings();
+
+		return new BulkController( $settings, new Pipeline( $converter, $this->gateway, $environment ), $this->gateway, $environment, new AltText( $settings, $this->gateway ) );
 	}
 }
