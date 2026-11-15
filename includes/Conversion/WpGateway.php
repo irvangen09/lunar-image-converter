@@ -33,6 +33,11 @@ final class WpGateway implements Gateway {
 	private const META_BACKUP_SIZES = '_wp_attachment_backup_sizes';
 
 	/**
+	 * Post meta key of the alt text of an image.
+	 */
+	private const META_ALT = '_wp_attachment_image_alt';
+
+	/**
 	 * {@inheritDoc}
 	 *
 	 * @param int $attachment_id Attachment ID.
@@ -399,5 +404,24 @@ final class WpGateway implements Gateway {
 		}
 
 		return $counts;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function alt_text( int $attachment_id ): string {
+		return (string) get_post_meta( $attachment_id, self::META_ALT, true );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int    $attachment_id Attachment ID.
+	 * @param string $alt           Alt text.
+	 */
+	public function set_alt_text( int $attachment_id, string $alt ): void {
+		update_post_meta( $attachment_id, self::META_ALT, wp_slash( $alt ) );
 	}
 }

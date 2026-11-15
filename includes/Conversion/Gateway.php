@@ -180,4 +180,19 @@ interface Gateway {
 	 * @return array<string, int> Counts for `pending`, `converted`, `skipped`, `failed` and `processing`.
 	 */
 	public function count_attachments( array $mimes ): array;
+
+	/**
+	 * Returns the alt text of an attachment, or an empty string.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function alt_text( int $attachment_id ): string;
+
+	/**
+	 * Saves the alt text of an attachment.
+	 *
+	 * @param int    $attachment_id Attachment ID.
+	 * @param string $alt           Alt text.
+	 */
+	public function set_alt_text( int $attachment_id, string $alt ): void;
 }

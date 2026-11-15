@@ -14,6 +14,7 @@ use LunarImageConverter\Conversion\Converter;
 use LunarImageConverter\Conversion\Pipeline;
 use LunarImageConverter\Conversion\UploadHandler;
 use LunarImageConverter\Conversion\WpGateway;
+use LunarImageConverter\Media\AltText;
 use LunarImageConverter\Settings\Settings;
 use LunarImageConverter\Support\Environment;
 
@@ -32,17 +33,21 @@ final class Plugin {
 
 	private BulkController $bulk_controller;
 
+	private AltText $alt_text;
+
 	/**
 	 * @param Settings       $settings        Plugin settings.
 	 * @param SettingsPage   $settings_page   Settings page under Media.
 	 * @param UploadHandler  $upload_handler  Converts images on upload.
 	 * @param BulkController $bulk_controller Converts existing images on request.
+	 * @param AltText        $alt_text        Fills empty alt text from file names.
 	 */
-	public function __construct( Settings $settings, SettingsPage $settings_page, UploadHandler $upload_handler, BulkController $bulk_controller ) {
+	public function __construct( Settings $settings, SettingsPage $settings_page, UploadHandler $upload_handler, BulkController $bulk_controller, AltText $alt_text ) {
 		$this->settings        = $settings;
 		$this->settings_page   = $settings_page;
 		$this->upload_handler  = $upload_handler;
 		$this->bulk_controller = $bulk_controller;
+		$this->alt_text        = $alt_text;
 	}
 
 	/**
@@ -53,12 +58,14 @@ final class Plugin {
 		$environment = new Environment();
 		$gateway     = new WpGateway();
 		$pipeline    = new Pipeline( new Converter(), $gateway, $environment );
+		$alt_text    = new AltText( $settings, $gateway );
 
 		return new self(
 			$settings,
 			new SettingsPage( $settings, $environment, new BulkPanel( $settings, $environment ) ),
 			new UploadHandler( $settings, $pipeline ),
-			new BulkController( $settings, $pipeline, $gateway, $environment )
+			new BulkController( $settings, $pipeline, $gateway, $environment, $alt_text ),
+			$alt_text
 		);
 	}
 
@@ -70,6 +77,7 @@ final class Plugin {
 
 		// Uploads also arrive through the REST API, so this is not limited to the admin.
 		$this->upload_handler->register();
+		$this->alt_text->register();
 
 		if ( is_admin() ) {
 			$this->settings_page->register();

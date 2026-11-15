@@ -76,6 +76,9 @@ final class BulkPanel {
 						<?php esc_html_e( 'I have backed up my uploads folder and my database.', 'lunar-image-converter' ); ?>
 					</label>
 				</p>
+				<?php if ( $values['auto_alt_text'] ) : ?>
+					<p><?php esc_html_e( 'Empty alt text of these images is also filled from the file name, as set above.', 'lunar-image-converter' ); ?></p>
+				<?php endif; ?>
 				<p id="lic-bulk-counts" aria-live="polite"><?php esc_html_e( 'Counting images…', 'lunar-image-converter' ); ?></p>
 				<p class="lic-bulk__buttons">
 					<button type="button" class="button button-primary" id="lic-bulk-start" disabled><?php esc_html_e( 'Convert images', 'lunar-image-converter' ); ?></button>
@@ -130,6 +133,8 @@ final class BulkPanel {
 				'finished'      => __( 'Done. Converted: %1$s. Skipped: %2$s. Failed: %3$s. Space saved: %4$s.', 'lunar-image-converter' ),
 				/* translators: 1: converted, 2: skipped, 3: failed, 4: space saved, for example 3.2 MB. */
 				'stopped'       => __( 'Stopped. Converted: %1$s. Skipped: %2$s. Failed: %3$s. Space saved: %4$s.', 'lunar-image-converter' ),
+				/* translators: %s: number of images that got alt text. */
+				'altAdded'      => __( 'Alt text added: %1$s.', 'lunar-image-converter' ),
 				'requestFailed' => __( 'The request failed. Check your connection and try again. Images already converted stay converted.', 'lunar-image-converter' ),
 				/* translators: 1: attachment ID, 2: file name, 3: result, for example Converted. */
 				'logLine'       => __( '#%1$s %2$s: %3$s', 'lunar-image-converter' ),
