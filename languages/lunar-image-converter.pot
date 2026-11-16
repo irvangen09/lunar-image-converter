@@ -3,13 +3,13 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Lunar Image Converter 0.1.0\n"
-"Report-Msgid-Bugs-To: https://github.com/irvangen09/lunar-image-converter/issues\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/lunar-image-converter\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-15T05:18:47+00:00\n"
+"POT-Creation-Date: 2026-11-16T12:41:57+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: lunar-image-converter\n"
@@ -39,155 +39,115 @@ msgid "You do not have permission to do this."
 msgstr ""
 
 #: includes/Admin/BulkController.php:220
-#: includes/Admin/BulkPanel.php:65
+#: includes/Admin/BulkPanel.php:64
 msgid "The saved output format is not supported on this server. Choose another format and save the settings first."
 msgstr ""
 
 #: includes/Admin/BulkController.php:223
-#: includes/Admin/BulkPanel.php:67
+#: includes/Admin/BulkPanel.php:66
 msgid "Turn on JPEG or PNG in the settings and save them first."
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:62
+#: includes/Admin/BulkPanel.php:61
 msgid "Convert existing images"
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:69
+#: includes/Admin/BulkPanel.php:68
 msgid "Converts the images that are already in your media library, one at a time, with the saved settings. Save the settings above first."
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:71
+#: includes/Admin/BulkPanel.php:70
 msgid "Each converted image replaces its original files, and its address is replaced in the content of your posts and pages. Keep this tab open until the work is done. If you close it, the work stops, and images converted so far stay converted. Images that are not smaller as WebP or AVIF are left as they are."
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:76
+#: includes/Admin/BulkPanel.php:75
 msgid "I have backed up my uploads folder and my database."
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:80
+#: includes/Admin/BulkPanel.php:79
 msgid "Empty alt text of these images is also filled from the file name, as set above."
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:82
+#: includes/Admin/BulkPanel.php:81
 msgid "Counting images…"
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:84
+#: includes/Admin/BulkPanel.php:83
 msgid "Convert images"
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:85
+#: includes/Admin/BulkPanel.php:84
 msgid "Try again: skipped and failed images"
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:86
+#: includes/Admin/BulkPanel.php:85
 msgid "Stop"
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:91
+#: includes/Admin/BulkPanel.php:90
 msgid "Converting existing images needs JavaScript."
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:111
-msgid "Waiting"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:112
-msgid "Converted"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:113
-msgid "Skipped"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:114
-msgid "Failed"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:115
-msgid "Interrupted"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:118
-msgid "not smaller than the original"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:119
-msgid "too large to convert safely"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:120
-msgid "not enough time left in the request"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:121
-msgid "WordPress does not allow this file type"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:122
-msgid "a file is missing"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:123
-msgid "the server could not encode it"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:124
-msgid "WordPress could not save the change"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:125
-msgid "an error occurred"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:126
-msgid "WordPress has no data about this image"
-msgstr ""
-
-#: includes/Admin/BulkPanel.php:127
-msgid "the old files were kept because the content could not be updated everywhere"
-msgstr ""
-
 #. translators: 1: number of images done, 2: number of images in total.
-#: includes/Admin/BulkPanel.php:131
+#: includes/Admin/BulkPanel.php:113
 #, php-format
 msgid "Converting… %1$s of %2$s"
 msgstr ""
 
 #. translators: 1: converted, 2: skipped, 3: failed, 4: space saved, for example 3.2 MB.
-#: includes/Admin/BulkPanel.php:133
+#: includes/Admin/BulkPanel.php:115
 #, php-format
 msgid "Done. Converted: %1$s. Skipped: %2$s. Failed: %3$s. Space saved: %4$s."
 msgstr ""
 
 #. translators: 1: converted, 2: skipped, 3: failed, 4: space saved, for example 3.2 MB.
-#: includes/Admin/BulkPanel.php:135
+#: includes/Admin/BulkPanel.php:117
 #, php-format
 msgid "Stopped. Converted: %1$s. Skipped: %2$s. Failed: %3$s. Space saved: %4$s."
 msgstr ""
 
 #. translators: %s: number of images that got alt text.
-#: includes/Admin/BulkPanel.php:137
+#: includes/Admin/BulkPanel.php:119
 #, php-format
 msgid "Alt text added: %1$s."
 msgstr ""
 
-#: includes/Admin/BulkPanel.php:138
+#: includes/Admin/BulkPanel.php:120
 msgid "The request failed. Check your connection and try again. Images already converted stay converted."
 msgstr ""
 
 #. translators: 1: attachment ID, 2: file name, 3: result, for example Converted.
-#: includes/Admin/BulkPanel.php:140
+#: includes/Admin/BulkPanel.php:122
 #, php-format
 msgid "#%1$s %2$s: %3$s"
 msgstr ""
 
 #. translators: 1: attachment ID, 2: file name, 3: result, for example Skipped, 4: reason.
-#: includes/Admin/BulkPanel.php:142
+#: includes/Admin/BulkPanel.php:124
 #, php-format
 msgid "#%1$s %2$s: %3$s (%4$s)"
 msgstr ""
 
+#: includes/Admin/MediaStatus.php:85
+msgid "Not converted yet"
+msgstr ""
+
+#. translators: %s: space saved, for example 87 KB.
+#: includes/Admin/MediaStatus.php:101
+#, php-format
+msgid "Converted. Space saved: %s."
+msgstr ""
+
+#. translators: 1: result, for example Skipped, 2: reason.
+#: includes/Admin/MediaStatus.php:108
+#, php-format
+msgid "%1$s (%2$s)"
+msgstr ""
+
+#: includes/Admin/MediaStatus.php:127
+#: includes/Admin/MediaStatus.php:154
+#: includes/Admin/MediaStatus.php:174
+#: includes/Admin/MediaStatus.php:181
 #: includes/Admin/SettingsPage.php:54
 #: includes/Admin/SettingsPage.php:55
 msgid "Image Converter"
@@ -275,6 +235,92 @@ msgstr ""
 
 #: includes/Admin/SettingsPage.php:303
 msgid "Alt text that is already set is never changed. File names that are not words, such as IMG_20260101_123456, are skipped. Applies to new uploads and to images processed by Convert existing images."
+msgstr ""
+
+#: includes/Admin/StatusText.php:26
+msgid "Waiting"
+msgstr ""
+
+#: includes/Admin/StatusText.php:27
+msgid "Converted"
+msgstr ""
+
+#: includes/Admin/StatusText.php:28
+msgid "Skipped"
+msgstr ""
+
+#: includes/Admin/StatusText.php:29
+msgid "Failed"
+msgstr ""
+
+#: includes/Admin/StatusText.php:30
+msgid "Interrupted"
+msgstr ""
+
+#: includes/Admin/StatusText.php:41
+msgid "not smaller than the original"
+msgstr ""
+
+#: includes/Admin/StatusText.php:42
+msgid "too large to convert safely"
+msgstr ""
+
+#: includes/Admin/StatusText.php:43
+msgid "not enough time left in the request"
+msgstr ""
+
+#: includes/Admin/StatusText.php:44
+msgid "WordPress does not allow this file type"
+msgstr ""
+
+#: includes/Admin/StatusText.php:45
+msgid "a file is missing"
+msgstr ""
+
+#: includes/Admin/StatusText.php:46
+msgid "the server could not encode it"
+msgstr ""
+
+#: includes/Admin/StatusText.php:47
+msgid "WordPress could not save the change"
+msgstr ""
+
+#: includes/Admin/StatusText.php:48
+msgid "an error occurred"
+msgstr ""
+
+#: includes/Admin/StatusText.php:49
+msgid "WordPress has no data about this image"
+msgstr ""
+
+#: includes/Admin/StatusText.php:50
+msgid "the old files were kept because the content could not be updated everywhere"
+msgstr ""
+
+#: includes/Admin/StatusText.php:51
+msgid "this server cannot encode the chosen format"
+msgstr ""
+
+#. translators: %s: output format, for example AVIF.
+#: includes/Admin/UploadNotice.php:130
+#, php-format
+msgid "These uploaded images were not converted to %s:"
+msgstr ""
+
+#. translators: %s: number of images that are not listed.
+#: includes/Admin/UploadNotice.php:142
+#, php-format
+msgid "And %s more."
+msgstr ""
+
+#: includes/Admin/UploadNotice.php:147
+msgid "See the status of every image in the media library"
+msgstr ""
+
+#. translators: 1: file name, 2: reason the image was not converted.
+#: includes/Admin/UploadNotice.php:249
+#, php-format
+msgid "%1$s: %2$s"
 msgstr ""
 
 #. translators: 1: required PHP version, 2: running PHP version.

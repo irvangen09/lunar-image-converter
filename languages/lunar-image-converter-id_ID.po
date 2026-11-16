@@ -44,7 +44,7 @@ msgstr "Irvan Noerfazri"
 msgid "You do not have permission to do this."
 msgstr "Anda tidak memiliki izin untuk melakukan ini."
 
-#: includes/Admin/BulkController.php:220 includes/Admin/BulkPanel.php:65
+#: includes/Admin/BulkController.php:220 includes/Admin/BulkPanel.php:64
 msgid ""
 "The saved output format is not supported on this server. Choose another "
 "format and save the settings first."
@@ -52,15 +52,15 @@ msgstr ""
 "Format keluaran yang tersimpan tidak didukung di server ini. Pilih format "
 "lain dan simpan pengaturan terlebih dahulu."
 
-#: includes/Admin/BulkController.php:223 includes/Admin/BulkPanel.php:67
+#: includes/Admin/BulkController.php:223 includes/Admin/BulkPanel.php:66
 msgid "Turn on JPEG or PNG in the settings and save them first."
 msgstr "Aktifkan JPEG atau PNG di pengaturan dan simpan terlebih dahulu."
 
-#: includes/Admin/BulkPanel.php:62
+#: includes/Admin/BulkPanel.php:61
 msgid "Convert existing images"
 msgstr "Konversi gambar yang sudah ada"
 
-#: includes/Admin/BulkPanel.php:69
+#: includes/Admin/BulkPanel.php:68
 msgid ""
 "Converts the images that are already in your media library, one at a time, "
 "with the saved settings. Save the settings above first."
@@ -68,7 +68,7 @@ msgstr ""
 "Mengonversi gambar yang sudah ada di pustaka media Anda, satu per satu, "
 "dengan pengaturan yang tersimpan. Simpan pengaturan di atas terlebih dahulu."
 
-#: includes/Admin/BulkPanel.php:71
+#: includes/Admin/BulkPanel.php:70
 msgid ""
 "Each converted image replaces its original files, and its address is "
 "replaced in the content of your posts and pages. Keep this tab open until "
@@ -82,11 +82,11 @@ msgstr ""
 "yang sudah dikonversi tetap terkonversi. Gambar yang tidak menjadi lebih "
 "kecil sebagai WebP atau AVIF dibiarkan apa adanya."
 
-#: includes/Admin/BulkPanel.php:76
+#: includes/Admin/BulkPanel.php:75
 msgid "I have backed up my uploads folder and my database."
 msgstr "Saya sudah mencadangkan folder uploads dan database saya."
 
-#: includes/Admin/BulkPanel.php:80
+#: includes/Admin/BulkPanel.php:79
 msgid ""
 "Empty alt text of these images is also filled from the file name, as set "
 "above."
@@ -94,98 +94,35 @@ msgstr ""
 "Teks alternatif yang kosong pada gambar-gambar ini juga diisi dari nama "
 "file, sesuai pengaturan di atas."
 
-#: includes/Admin/BulkPanel.php:82
+#: includes/Admin/BulkPanel.php:81
 msgid "Counting images…"
 msgstr "Menghitung gambar…"
 
-#: includes/Admin/BulkPanel.php:84
+#: includes/Admin/BulkPanel.php:83
 msgid "Convert images"
 msgstr "Konversi gambar"
 
-#: includes/Admin/BulkPanel.php:85
+#: includes/Admin/BulkPanel.php:84
 msgid "Try again: skipped and failed images"
 msgstr "Coba lagi: gambar yang dilewati dan yang gagal"
 
-#: includes/Admin/BulkPanel.php:86
+#: includes/Admin/BulkPanel.php:85
 msgid "Stop"
 msgstr "Berhenti"
 
-#: includes/Admin/BulkPanel.php:91
+#: includes/Admin/BulkPanel.php:90
 msgid "Converting existing images needs JavaScript."
 msgstr "Mengonversi gambar yang sudah ada memerlukan JavaScript."
 
-#: includes/Admin/BulkPanel.php:111
-msgid "Waiting"
-msgstr "Menunggu"
-
-#: includes/Admin/BulkPanel.php:112
-msgid "Converted"
-msgstr "Dikonversi"
-
-#: includes/Admin/BulkPanel.php:113
-msgid "Skipped"
-msgstr "Dilewati"
-
-#: includes/Admin/BulkPanel.php:114
-msgid "Failed"
-msgstr "Gagal"
-
-#: includes/Admin/BulkPanel.php:115
-msgid "Interrupted"
-msgstr "Terputus"
-
-#: includes/Admin/BulkPanel.php:118
-msgid "not smaller than the original"
-msgstr "tidak lebih kecil dari aslinya"
-
-#: includes/Admin/BulkPanel.php:119
-msgid "too large to convert safely"
-msgstr "terlalu besar untuk dikonversi dengan aman"
-
-#: includes/Admin/BulkPanel.php:120
-msgid "not enough time left in the request"
-msgstr "waktu permintaan tidak cukup"
-
-#: includes/Admin/BulkPanel.php:121
-msgid "WordPress does not allow this file type"
-msgstr "WordPress tidak mengizinkan jenis file ini"
-
-#: includes/Admin/BulkPanel.php:122
-msgid "a file is missing"
-msgstr "ada file yang hilang"
-
-#: includes/Admin/BulkPanel.php:123
-msgid "the server could not encode it"
-msgstr "server tidak dapat mengenkodenya"
-
-#: includes/Admin/BulkPanel.php:124
-msgid "WordPress could not save the change"
-msgstr "WordPress tidak dapat menyimpan perubahan"
-
-#: includes/Admin/BulkPanel.php:125
-msgid "an error occurred"
-msgstr "terjadi galat"
-
-#: includes/Admin/BulkPanel.php:126
-msgid "WordPress has no data about this image"
-msgstr "WordPress tidak memiliki data tentang gambar ini"
-
-#: includes/Admin/BulkPanel.php:127
-msgid ""
-"the old files were kept because the content could not be updated everywhere"
-msgstr ""
-"file lama dipertahankan karena isi konten tidak dapat diperbarui di semua "
-"tempat"
-
 #. translators: 1: number of images done, 2: number of images in total.
-#: includes/Admin/BulkPanel.php:131
+#: includes/Admin/BulkPanel.php:113
 #, php-format
 msgid "Converting… %1$s of %2$s"
 msgstr "Mengonversi… %1$s dari %2$s"
 
 #. translators: 1: converted, 2: skipped, 3: failed, 4: space saved, for
 #. example 3.2 MB.
-#: includes/Admin/BulkPanel.php:133
+#: includes/Admin/BulkPanel.php:115
 #, php-format
 msgid "Done. Converted: %1$s. Skipped: %2$s. Failed: %3$s. Space saved: %4$s."
 msgstr ""
@@ -194,7 +131,7 @@ msgstr ""
 
 #. translators: 1: converted, 2: skipped, 3: failed, 4: space saved, for
 #. example 3.2 MB.
-#: includes/Admin/BulkPanel.php:135
+#: includes/Admin/BulkPanel.php:117
 #, php-format
 msgid ""
 "Stopped. Converted: %1$s. Skipped: %2$s. Failed: %3$s. Space saved: %4$s."
@@ -203,12 +140,12 @@ msgstr ""
 "dihemat: %4$s."
 
 #. translators: %s: number of images that got alt text.
-#: includes/Admin/BulkPanel.php:137
+#: includes/Admin/BulkPanel.php:119
 #, php-format
 msgid "Alt text added: %1$s."
 msgstr "Teks alternatif ditambahkan: %1$s."
 
-#: includes/Admin/BulkPanel.php:138
+#: includes/Admin/BulkPanel.php:120
 msgid ""
 "The request failed. Check your connection and try again. Images already "
 "converted stay converted."
@@ -218,18 +155,36 @@ msgstr ""
 
 #. translators: 1: attachment ID, 2: file name, 3: result, for example
 #. Converted.
-#: includes/Admin/BulkPanel.php:140
+#: includes/Admin/BulkPanel.php:122
 #, php-format
 msgid "#%1$s %2$s: %3$s"
 msgstr "#%1$s %2$s: %3$s"
 
 #. translators: 1: attachment ID, 2: file name, 3: result, for example
 #. Skipped, 4: reason.
-#: includes/Admin/BulkPanel.php:142
+#: includes/Admin/BulkPanel.php:124
 #, php-format
 msgid "#%1$s %2$s: %3$s (%4$s)"
 msgstr "#%1$s %2$s: %3$s (%4$s)"
 
+#: includes/Admin/MediaStatus.php:85
+msgid "Not converted yet"
+msgstr "Belum dikonversi"
+
+#. translators: %s: space saved, for example 87 KB.
+#: includes/Admin/MediaStatus.php:101
+#, php-format
+msgid "Converted. Space saved: %s."
+msgstr "Dikonversi. Ruang dihemat: %s."
+
+#. translators: 1: result, for example Skipped, 2: reason.
+#: includes/Admin/MediaStatus.php:108
+#, php-format
+msgid "%1$s (%2$s)"
+msgstr "%1$s (%2$s)"
+
+#: includes/Admin/MediaStatus.php:127 includes/Admin/MediaStatus.php:154
+#: includes/Admin/MediaStatus.php:174 includes/Admin/MediaStatus.php:181
 #: includes/Admin/SettingsPage.php:54 includes/Admin/SettingsPage.php:55
 msgid "Image Converter"
 msgstr "Konverter Gambar"
@@ -339,6 +294,95 @@ msgstr ""
 "Teks alternatif yang sudah terisi tidak pernah diubah. Nama file yang bukan "
 "kata, seperti IMG_20260101_123456, dilewati. Berlaku untuk unggahan baru dan"
 " untuk gambar yang diproses oleh Konversi gambar yang sudah ada."
+
+#: includes/Admin/StatusText.php:26
+msgid "Waiting"
+msgstr "Menunggu"
+
+#: includes/Admin/StatusText.php:27
+msgid "Converted"
+msgstr "Dikonversi"
+
+#: includes/Admin/StatusText.php:28
+msgid "Skipped"
+msgstr "Dilewati"
+
+#: includes/Admin/StatusText.php:29
+msgid "Failed"
+msgstr "Gagal"
+
+#: includes/Admin/StatusText.php:30
+msgid "Interrupted"
+msgstr "Terputus"
+
+#: includes/Admin/StatusText.php:41
+msgid "not smaller than the original"
+msgstr "tidak lebih kecil dari aslinya"
+
+#: includes/Admin/StatusText.php:42
+msgid "too large to convert safely"
+msgstr "terlalu besar untuk dikonversi dengan aman"
+
+#: includes/Admin/StatusText.php:43
+msgid "not enough time left in the request"
+msgstr "waktu permintaan tidak cukup"
+
+#: includes/Admin/StatusText.php:44
+msgid "WordPress does not allow this file type"
+msgstr "WordPress tidak mengizinkan jenis file ini"
+
+#: includes/Admin/StatusText.php:45
+msgid "a file is missing"
+msgstr "ada file yang hilang"
+
+#: includes/Admin/StatusText.php:46
+msgid "the server could not encode it"
+msgstr "server tidak dapat mengenkodenya"
+
+#: includes/Admin/StatusText.php:47
+msgid "WordPress could not save the change"
+msgstr "WordPress tidak dapat menyimpan perubahan"
+
+#: includes/Admin/StatusText.php:48
+msgid "an error occurred"
+msgstr "terjadi galat"
+
+#: includes/Admin/StatusText.php:49
+msgid "WordPress has no data about this image"
+msgstr "WordPress tidak memiliki data tentang gambar ini"
+
+#: includes/Admin/StatusText.php:50
+msgid ""
+"the old files were kept because the content could not be updated everywhere"
+msgstr ""
+"file lama dipertahankan karena isi konten tidak dapat diperbarui di semua "
+"tempat"
+
+#: includes/Admin/StatusText.php:51
+msgid "this server cannot encode the chosen format"
+msgstr "server ini tidak dapat mengenkode format yang dipilih"
+
+#. translators: %s: output format, for example AVIF.
+#: includes/Admin/UploadNotice.php:130
+#, php-format
+msgid "These uploaded images were not converted to %s:"
+msgstr "Gambar yang diunggah ini tidak dikonversi ke %s:"
+
+#. translators: %s: number of images that are not listed.
+#: includes/Admin/UploadNotice.php:142
+#, php-format
+msgid "And %s more."
+msgstr "Dan %s lainnya."
+
+#: includes/Admin/UploadNotice.php:147
+msgid "See the status of every image in the media library"
+msgstr "Lihat status setiap gambar di pustaka media"
+
+#. translators: 1: file name, 2: reason the image was not converted.
+#: includes/Admin/UploadNotice.php:249
+#, php-format
+msgid "%1$s: %2$s"
+msgstr "%1$s: %2$s"
 
 #. translators: 1: required PHP version, 2: running PHP version.
 #: lunar-image-converter.php:71

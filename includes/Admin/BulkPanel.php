@@ -7,7 +7,6 @@
 
 namespace LunarImageConverter\Admin;
 
-use LunarImageConverter\Conversion\Pipeline;
 use LunarImageConverter\Settings\Settings;
 use LunarImageConverter\Support\Environment;
 
@@ -107,25 +106,8 @@ final class BulkPanel {
 				'count'   => BulkController::ACTION_COUNT,
 				'process' => BulkController::ACTION_PROCESS,
 			),
-			'labels'  => array(
-				'pending'                   => __( 'Waiting', 'lunar-image-converter' ),
-				Pipeline::STATUS_CONVERTED  => __( 'Converted', 'lunar-image-converter' ),
-				Pipeline::STATUS_SKIPPED    => __( 'Skipped', 'lunar-image-converter' ),
-				Pipeline::STATUS_FAILED     => __( 'Failed', 'lunar-image-converter' ),
-				Pipeline::STATUS_PROCESSING => __( 'Interrupted', 'lunar-image-converter' ),
-			),
-			'reasons' => array(
-				Pipeline::REASON_NOT_SMALLER      => __( 'not smaller than the original', 'lunar-image-converter' ),
-				Pipeline::REASON_TOO_LARGE        => __( 'too large to convert safely', 'lunar-image-converter' ),
-				Pipeline::REASON_TIME_LIMIT       => __( 'not enough time left in the request', 'lunar-image-converter' ),
-				Pipeline::REASON_MIME_NOT_ALLOWED => __( 'WordPress does not allow this file type', 'lunar-image-converter' ),
-				Pipeline::REASON_MISSING_FILE     => __( 'a file is missing', 'lunar-image-converter' ),
-				Pipeline::REASON_ENCODE_FAILED    => __( 'the server could not encode it', 'lunar-image-converter' ),
-				Pipeline::REASON_UPDATE_FAILED    => __( 'WordPress could not save the change', 'lunar-image-converter' ),
-				Pipeline::REASON_ERROR            => __( 'an error occurred', 'lunar-image-converter' ),
-				Pipeline::REASON_NO_METADATA      => __( 'WordPress has no data about this image', 'lunar-image-converter' ),
-				Pipeline::REASON_OLD_FILES_KEPT   => __( 'the old files were kept because the content could not be updated everywhere', 'lunar-image-converter' ),
-			),
+			'labels'  => StatusText::statuses(),
+			'reasons' => StatusText::reasons(),
 			'text'    => array(
 				/* translators: 1: number of images done, 2: number of images in total. */
 				'running'       => __( 'Converting… %1$s of %2$s', 'lunar-image-converter' ),

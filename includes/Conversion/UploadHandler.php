@@ -40,7 +40,7 @@ final class UploadHandler {
 	/**
 	 * Converts a new attachment once WordPress has made its sizes.
 	 *
-	 * A failure here never fails the upload: the metadata is handed back as it came in.
+	 * A failure here never fails the upload: the metadata is handed back as it came in, and the failure is recorded.
 	 *
 	 * @param mixed $metadata      Attachment metadata.
 	 * @param mixed $attachment_id Attachment ID.
@@ -54,6 +54,8 @@ final class UploadHandler {
 		try {
 			return $this->pipeline->convert( (int) $attachment_id, $metadata, $this->settings->all() );
 		} catch ( \Throwable ) {
+			$this->pipeline->mark_error( (int) $attachment_id );
+
 			return $metadata;
 		}
 	}

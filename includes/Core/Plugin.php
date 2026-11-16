@@ -9,7 +9,9 @@ namespace LunarImageConverter\Core;
 
 use LunarImageConverter\Admin\BulkController;
 use LunarImageConverter\Admin\BulkPanel;
+use LunarImageConverter\Admin\MediaStatus;
 use LunarImageConverter\Admin\SettingsPage;
+use LunarImageConverter\Admin\UploadNotice;
 use LunarImageConverter\Conversion\Converter;
 use LunarImageConverter\Conversion\Pipeline;
 use LunarImageConverter\Conversion\UploadHandler;
@@ -35,19 +37,27 @@ final class Plugin {
 
 	private AltText $alt_text;
 
+	private MediaStatus $media_status;
+
+	private UploadNotice $upload_notice;
+
 	/**
 	 * @param Settings       $settings        Plugin settings.
 	 * @param SettingsPage   $settings_page   Settings page under Media.
 	 * @param UploadHandler  $upload_handler  Converts images on upload.
 	 * @param BulkController $bulk_controller Converts existing images on request.
 	 * @param AltText        $alt_text        Fills empty alt text from file names.
+	 * @param MediaStatus    $media_status    Shows the conversion status in the media library.
+	 * @param UploadNotice   $upload_notice   Reports uploads that were not converted.
 	 */
-	public function __construct( Settings $settings, SettingsPage $settings_page, UploadHandler $upload_handler, BulkController $bulk_controller, AltText $alt_text ) {
+	public function __construct( Settings $settings, SettingsPage $settings_page, UploadHandler $upload_handler, BulkController $bulk_controller, AltText $alt_text, MediaStatus $media_status, UploadNotice $upload_notice ) {
 		$this->settings        = $settings;
 		$this->settings_page   = $settings_page;
 		$this->upload_handler  = $upload_handler;
 		$this->bulk_controller = $bulk_controller;
 		$this->alt_text        = $alt_text;
+		$this->media_status    = $media_status;
+		$this->upload_notice   = $upload_notice;
 	}
 
 	/**
@@ -59,13 +69,16 @@ final class Plugin {
 		$gateway     = new WpGateway();
 		$pipeline    = new Pipeline( new Converter(), $gateway, $environment );
 		$alt_text    = new AltText( $settings, $gateway );
+		$status      = new MediaStatus( $gateway, $settings );
 
 		return new self(
 			$settings,
 			new SettingsPage( $settings, $environment, new BulkPanel( $settings, $environment ) ),
 			new UploadHandler( $settings, $pipeline ),
 			new BulkController( $settings, $pipeline, $gateway, $environment, $alt_text ),
-			$alt_text
+			$alt_text,
+			$status,
+			new UploadNotice( $gateway, $status, $settings )
 		);
 	}
 
@@ -78,10 +91,12 @@ final class Plugin {
 		// Uploads also arrive through the REST API, so this is not limited to the admin.
 		$this->upload_handler->register();
 		$this->alt_text->register();
+		$this->upload_notice->register();
 
 		if ( is_admin() ) {
 			$this->settings_page->register();
 			$this->bulk_controller->register();
+			$this->media_status->register();
 		}
 	}
 

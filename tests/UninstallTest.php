@@ -7,6 +7,7 @@
 
 namespace LunarImageConverter\Tests;
 
+use LunarImageConverter\Admin\UploadNotice;
 use LunarImageConverter\Conversion\WpGateway;
 use LunarImageConverter\Settings\Settings;
 use PHPUnit\Framework\TestCase;
@@ -31,6 +32,14 @@ final class UninstallTest extends TestCase {
 		foreach ( WpGateway::META_KEYS as $key ) {
 			$this->assertStringContainsString( "delete_post_meta_by_key( '" . $key . "' )", $this->script, "Meta key: {$key}" );
 		}
+	}
+
+	public function test_deletes_the_saved_upload_notices_of_every_user_once(): void {
+		$call = "delete_metadata( 'user', 0, '" . UploadNotice::META_KEY . "', '', true )";
+
+		$this->assertSame( 1, substr_count( $this->script, $call ) );
+		$this->assertLessThan( strpos( $this->script, 'is_multisite()' ), strpos( $this->script, $call ), 'The call must run once, before the per-site loop.' );
+		$this->assertStringStartsWith( '_lunar_image_converter_', UploadNotice::META_KEY );
 	}
 
 	public function test_meta_keys_use_the_plugin_prefix(): void {
