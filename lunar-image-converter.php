@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Lunar Image Converter
  * Plugin URI:        https://github.com/irvangen09/lunar-image-converter
- * Description:      Converts JPEG and PNG images to WebP or AVIF on upload and replaces the originals.
+ * Description:       Converts JPEG and PNG images to WebP or AVIF on upload and replaces the originals.
  * Version:           0.1.0
  * Requires at least: 7.0
  * Requires PHP:      8.1
@@ -10,6 +10,7 @@
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       lunar-image-converter
+ * Domain Path:       /languages
  *
  * @package LunarImageConverter
  */
@@ -52,6 +53,8 @@ function lunar_image_converter_unmet_requirement( $php_version, $wp_version ) {
  * @return void
  */
 function lunar_image_converter_boot() {
+	load_plugin_textdomain( 'lunar-image-converter', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+
 	$unmet = lunar_image_converter_unmet_requirement( PHP_VERSION, get_bloginfo( 'version' ) );
 
 	if ( '' !== $unmet ) {

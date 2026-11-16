@@ -1,0 +1,361 @@
+# Copyright (C) 2026 Irvan Noerfazri
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Lunar Image Converter 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/irvangen09/lunar-image-converter/issues\n"
+"POT-Creation-Date: 2026-11-15T05:18:47+00:00\n"
+"PO-Revision-Date: 2026-11-15 12:30+0700\n"
+"Last-Translator: Lunar Image Converter project\n"
+"Language-Team: Indonesian\n"
+"Language: id_ID\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Domain: lunar-image-converter\n"
+"X-Generator: WP-CLI 2.12.0\n"
+
+#. Plugin Name of the plugin
+#: lunar-image-converter.php
+msgid "Lunar Image Converter"
+msgstr "Lunar Image Converter"
+
+#. Plugin URI of the plugin
+#: lunar-image-converter.php
+msgid "https://github.com/irvangen09/lunar-image-converter"
+msgstr "https://github.com/irvangen09/lunar-image-converter"
+
+#. Description of the plugin
+#: lunar-image-converter.php
+msgid ""
+"Converts JPEG and PNG images to WebP or AVIF on upload and replaces the "
+"originals."
+msgstr ""
+"Mengonversi gambar JPEG dan PNG menjadi WebP atau AVIF saat diunggah dan "
+"menggantikan file aslinya."
+
+#. Author of the plugin
+#: lunar-image-converter.php
+msgid "Irvan Noerfazri"
+msgstr "Irvan Noerfazri"
+
+#: includes/Admin/BulkController.php:209
+msgid "You do not have permission to do this."
+msgstr "Anda tidak memiliki izin untuk melakukan ini."
+
+#: includes/Admin/BulkController.php:220 includes/Admin/BulkPanel.php:65
+msgid ""
+"The saved output format is not supported on this server. Choose another "
+"format and save the settings first."
+msgstr ""
+"Format keluaran yang tersimpan tidak didukung di server ini. Pilih format "
+"lain dan simpan pengaturan terlebih dahulu."
+
+#: includes/Admin/BulkController.php:223 includes/Admin/BulkPanel.php:67
+msgid "Turn on JPEG or PNG in the settings and save them first."
+msgstr "Aktifkan JPEG atau PNG di pengaturan dan simpan terlebih dahulu."
+
+#: includes/Admin/BulkPanel.php:62
+msgid "Convert existing images"
+msgstr "Konversi gambar yang sudah ada"
+
+#: includes/Admin/BulkPanel.php:69
+msgid ""
+"Converts the images that are already in your media library, one at a time, "
+"with the saved settings. Save the settings above first."
+msgstr ""
+"Mengonversi gambar yang sudah ada di pustaka media Anda, satu per satu, "
+"dengan pengaturan yang tersimpan. Simpan pengaturan di atas terlebih dahulu."
+
+#: includes/Admin/BulkPanel.php:71
+msgid ""
+"Each converted image replaces its original files, and its address is "
+"replaced in the content of your posts and pages. Keep this tab open until "
+"the work is done. If you close it, the work stops, and images converted so "
+"far stay converted. Images that are not smaller as WebP or AVIF are left as "
+"they are."
+msgstr ""
+"Setiap gambar yang dikonversi menggantikan file aslinya, dan alamatnya "
+"diganti di isi tulisan dan halaman Anda. Biarkan tab ini tetap terbuka "
+"sampai proses selesai. Jika Anda menutupnya, proses berhenti, dan gambar "
+"yang sudah dikonversi tetap terkonversi. Gambar yang tidak menjadi lebih "
+"kecil sebagai WebP atau AVIF dibiarkan apa adanya."
+
+#: includes/Admin/BulkPanel.php:76
+msgid "I have backed up my uploads folder and my database."
+msgstr "Saya sudah mencadangkan folder uploads dan database saya."
+
+#: includes/Admin/BulkPanel.php:80
+msgid ""
+"Empty alt text of these images is also filled from the file name, as set "
+"above."
+msgstr ""
+"Teks alternatif yang kosong pada gambar-gambar ini juga diisi dari nama "
+"file, sesuai pengaturan di atas."
+
+#: includes/Admin/BulkPanel.php:82
+msgid "Counting images…"
+msgstr "Menghitung gambar…"
+
+#: includes/Admin/BulkPanel.php:84
+msgid "Convert images"
+msgstr "Konversi gambar"
+
+#: includes/Admin/BulkPanel.php:85
+msgid "Try again: skipped and failed images"
+msgstr "Coba lagi: gambar yang dilewati dan yang gagal"
+
+#: includes/Admin/BulkPanel.php:86
+msgid "Stop"
+msgstr "Berhenti"
+
+#: includes/Admin/BulkPanel.php:91
+msgid "Converting existing images needs JavaScript."
+msgstr "Mengonversi gambar yang sudah ada memerlukan JavaScript."
+
+#: includes/Admin/BulkPanel.php:111
+msgid "Waiting"
+msgstr "Menunggu"
+
+#: includes/Admin/BulkPanel.php:112
+msgid "Converted"
+msgstr "Dikonversi"
+
+#: includes/Admin/BulkPanel.php:113
+msgid "Skipped"
+msgstr "Dilewati"
+
+#: includes/Admin/BulkPanel.php:114
+msgid "Failed"
+msgstr "Gagal"
+
+#: includes/Admin/BulkPanel.php:115
+msgid "Interrupted"
+msgstr "Terputus"
+
+#: includes/Admin/BulkPanel.php:118
+msgid "not smaller than the original"
+msgstr "tidak lebih kecil dari aslinya"
+
+#: includes/Admin/BulkPanel.php:119
+msgid "too large to convert safely"
+msgstr "terlalu besar untuk dikonversi dengan aman"
+
+#: includes/Admin/BulkPanel.php:120
+msgid "not enough time left in the request"
+msgstr "waktu permintaan tidak cukup"
+
+#: includes/Admin/BulkPanel.php:121
+msgid "WordPress does not allow this file type"
+msgstr "WordPress tidak mengizinkan jenis file ini"
+
+#: includes/Admin/BulkPanel.php:122
+msgid "a file is missing"
+msgstr "ada file yang hilang"
+
+#: includes/Admin/BulkPanel.php:123
+msgid "the server could not encode it"
+msgstr "server tidak dapat mengenkodenya"
+
+#: includes/Admin/BulkPanel.php:124
+msgid "WordPress could not save the change"
+msgstr "WordPress tidak dapat menyimpan perubahan"
+
+#: includes/Admin/BulkPanel.php:125
+msgid "an error occurred"
+msgstr "terjadi galat"
+
+#: includes/Admin/BulkPanel.php:126
+msgid "WordPress has no data about this image"
+msgstr "WordPress tidak memiliki data tentang gambar ini"
+
+#: includes/Admin/BulkPanel.php:127
+msgid ""
+"the old files were kept because the content could not be updated everywhere"
+msgstr ""
+"file lama dipertahankan karena isi konten tidak dapat diperbarui di semua "
+"tempat"
+
+#. translators: 1: number of images done, 2: number of images in total.
+#: includes/Admin/BulkPanel.php:131
+#, php-format
+msgid "Converting… %1$s of %2$s"
+msgstr "Mengonversi… %1$s dari %2$s"
+
+#. translators: 1: converted, 2: skipped, 3: failed, 4: space saved, for
+#. example 3.2 MB.
+#: includes/Admin/BulkPanel.php:133
+#, php-format
+msgid "Done. Converted: %1$s. Skipped: %2$s. Failed: %3$s. Space saved: %4$s."
+msgstr ""
+"Selesai. Dikonversi: %1$s. Dilewati: %2$s. Gagal: %3$s. Ruang yang dihemat: "
+"%4$s."
+
+#. translators: 1: converted, 2: skipped, 3: failed, 4: space saved, for
+#. example 3.2 MB.
+#: includes/Admin/BulkPanel.php:135
+#, php-format
+msgid ""
+"Stopped. Converted: %1$s. Skipped: %2$s. Failed: %3$s. Space saved: %4$s."
+msgstr ""
+"Dihentikan. Dikonversi: %1$s. Dilewati: %2$s. Gagal: %3$s. Ruang yang "
+"dihemat: %4$s."
+
+#. translators: %s: number of images that got alt text.
+#: includes/Admin/BulkPanel.php:137
+#, php-format
+msgid "Alt text added: %1$s."
+msgstr "Teks alternatif ditambahkan: %1$s."
+
+#: includes/Admin/BulkPanel.php:138
+msgid ""
+"The request failed. Check your connection and try again. Images already "
+"converted stay converted."
+msgstr ""
+"Permintaan gagal. Periksa koneksi Anda dan coba lagi. Gambar yang sudah "
+"dikonversi tetap terkonversi."
+
+#. translators: 1: attachment ID, 2: file name, 3: result, for example
+#. Converted.
+#: includes/Admin/BulkPanel.php:140
+#, php-format
+msgid "#%1$s %2$s: %3$s"
+msgstr "#%1$s %2$s: %3$s"
+
+#. translators: 1: attachment ID, 2: file name, 3: result, for example
+#. Skipped, 4: reason.
+#: includes/Admin/BulkPanel.php:142
+#, php-format
+msgid "#%1$s %2$s: %3$s (%4$s)"
+msgstr "#%1$s %2$s: %3$s (%4$s)"
+
+#: includes/Admin/SettingsPage.php:54 includes/Admin/SettingsPage.php:55
+msgid "Image Converter"
+msgstr "Konverter Gambar"
+
+#: includes/Admin/SettingsPage.php:100
+msgid "You do not have permission to access this page."
+msgstr "Anda tidak memiliki izin untuk mengakses halaman ini."
+
+#: includes/Admin/SettingsPage.php:112
+msgid "Warning:"
+msgstr "Peringatan:"
+
+#: includes/Admin/SettingsPage.php:113
+msgid ""
+"Converted images replace the originals. The original files and their resized"
+" copies are deleted from the server, and this cannot be undone. Back up your"
+" uploads folder and your database before converting images."
+msgstr ""
+"Gambar yang dikonversi menggantikan aslinya. File asli beserta salinan "
+"ukurannya dihapus dari server, dan ini tidak dapat dibatalkan. Cadangkan "
+"folder uploads dan database Anda sebelum mengonversi gambar."
+
+#: includes/Admin/SettingsPage.php:117
+msgid "Server support"
+msgstr "Dukungan server"
+
+#: includes/Admin/SettingsPage.php:120
+msgid "Settings"
+msgstr "Pengaturan"
+
+#: includes/Admin/SettingsPage.php:125 includes/Admin/SettingsPage.php:190
+msgid "Output format"
+msgstr "Format keluaran"
+
+#: includes/Admin/SettingsPage.php:129
+msgid "Quality"
+msgstr "Kualitas"
+
+#: includes/Admin/SettingsPage.php:133 includes/Admin/SettingsPage.php:275
+msgid "Image types"
+msgstr "Jenis gambar"
+
+#: includes/Admin/SettingsPage.php:137
+msgid "Alt text"
+msgstr "Teks alternatif"
+
+#: includes/Admin/SettingsPage.php:162
+msgid "Supported"
+msgstr "Didukung"
+
+#: includes/Admin/SettingsPage.php:162
+msgid "Not supported"
+msgstr "Tidak didukung"
+
+#. translators: %s: name of the saved format, for example AVIF.
+#: includes/Admin/SettingsPage.php:183
+#, php-format
+msgid ""
+"The saved format (%s) is not supported on this server. Choose another format"
+" and save."
+msgstr ""
+"Format yang tersimpan (%s) tidak didukung di server ini. Pilih format lain "
+"dan simpan."
+
+#: includes/Admin/SettingsPage.php:223
+msgid ""
+"Your server cannot encode AVIF. It needs Imagick built with AVIF support, or"
+" GD built with AVIF support on PHP 8.1 or later."
+msgstr ""
+"Server Anda tidak dapat mengenkode AVIF. Server memerlukan Imagick yang "
+"dibangun dengan dukungan AVIF, atau GD yang dibangun dengan dukungan AVIF "
+"pada PHP 8.1 atau lebih baru."
+
+#. translators: %s: name of the format, for example WebP.
+#: includes/Admin/SettingsPage.php:228
+#, php-format
+msgid "Your server cannot encode %s."
+msgstr "Server Anda tidak dapat mengenkode %s."
+
+#: includes/Admin/SettingsPage.php:234
+msgid "Slower to encode than WebP."
+msgstr "Lebih lambat dienkode daripada WebP."
+
+#. translators: 1: lowest quality, 2: highest quality, 3: default quality.
+#: includes/Admin/SettingsPage.php:259
+#, php-format
+msgid ""
+"%1$d to %2$d. Higher means better quality and larger files. Default: %3$d."
+msgstr ""
+"%1$d sampai %2$d. Semakin tinggi berarti kualitas lebih baik dan file lebih "
+"besar. Bawaan: %3$d."
+
+#: includes/Admin/SettingsPage.php:282
+msgid "GIF and other image types are never converted."
+msgstr "GIF dan jenis gambar lain tidak pernah dikonversi."
+
+#: includes/Admin/SettingsPage.php:297
+msgid "Fill empty alt text from the file name"
+msgstr "Isi teks alternatif yang kosong dari nama file"
+
+#: includes/Admin/SettingsPage.php:303
+msgid ""
+"Alt text that is already set is never changed. File names that are not "
+"words, such as IMG_20260101_123456, are skipped. Applies to new uploads and "
+"to images processed by Convert existing images."
+msgstr ""
+"Teks alternatif yang sudah terisi tidak pernah diubah. Nama file yang bukan "
+"kata, seperti IMG_20260101_123456, dilewati. Berlaku untuk unggahan baru dan"
+" untuk gambar yang diproses oleh Konversi gambar yang sudah ada."
+
+#. translators: 1: required PHP version, 2: running PHP version.
+#: lunar-image-converter.php:71
+#, php-format
+msgid ""
+"Lunar Image Converter requires PHP %1$s or higher. This site runs PHP %2$s, "
+"so the plugin is inactive."
+msgstr ""
+"Lunar Image Converter memerlukan PHP %1$s atau lebih baru. Situs ini "
+"menjalankan PHP %2$s, sehingga plugin tidak aktif."
+
+#. translators: 1: required WordPress version, 2: running WordPress version.
+#: lunar-image-converter.php:78
+#, php-format
+msgid ""
+"Lunar Image Converter requires WordPress %1$s or higher. This site runs "
+"WordPress %2$s, so the plugin is inactive."
+msgstr ""
+"Lunar Image Converter memerlukan WordPress %1$s atau lebih baru. Situs ini "
+"menjalankan WordPress %2$s, sehingga plugin tidak aktif."

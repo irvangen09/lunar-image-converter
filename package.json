@@ -17,6 +17,7 @@
   "files": [
     "assets",
     "includes",
+    "languages",
     "lunar-image-converter.php",
     "uninstall.php",
     "LICENSE"

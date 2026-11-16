@@ -1,0 +1,290 @@
+# Copyright (C) 2026 Irvan Noerfazri
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Lunar Image Converter 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/irvangen09/lunar-image-converter/issues\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-11-15T05:18:47+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: lunar-image-converter\n"
+
+#. Plugin Name of the plugin
+#: lunar-image-converter.php
+msgid "Lunar Image Converter"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: lunar-image-converter.php
+msgid "https://github.com/irvangen09/lunar-image-converter"
+msgstr ""
+
+#. Description of the plugin
+#: lunar-image-converter.php
+msgid "Converts JPEG and PNG images to WebP or AVIF on upload and replaces the originals."
+msgstr ""
+
+#. Author of the plugin
+#: lunar-image-converter.php
+msgid "Irvan Noerfazri"
+msgstr ""
+
+#: includes/Admin/BulkController.php:209
+msgid "You do not have permission to do this."
+msgstr ""
+
+#: includes/Admin/BulkController.php:220
+#: includes/Admin/BulkPanel.php:65
+msgid "The saved output format is not supported on this server. Choose another format and save the settings first."
+msgstr ""
+
+#: includes/Admin/BulkController.php:223
+#: includes/Admin/BulkPanel.php:67
+msgid "Turn on JPEG or PNG in the settings and save them first."
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:62
+msgid "Convert existing images"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:69
+msgid "Converts the images that are already in your media library, one at a time, with the saved settings. Save the settings above first."
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:71
+msgid "Each converted image replaces its original files, and its address is replaced in the content of your posts and pages. Keep this tab open until the work is done. If you close it, the work stops, and images converted so far stay converted. Images that are not smaller as WebP or AVIF are left as they are."
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:76
+msgid "I have backed up my uploads folder and my database."
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:80
+msgid "Empty alt text of these images is also filled from the file name, as set above."
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:82
+msgid "Counting images…"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:84
+msgid "Convert images"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:85
+msgid "Try again: skipped and failed images"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:86
+msgid "Stop"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:91
+msgid "Converting existing images needs JavaScript."
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:111
+msgid "Waiting"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:112
+msgid "Converted"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:113
+msgid "Skipped"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:114
+msgid "Failed"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:115
+msgid "Interrupted"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:118
+msgid "not smaller than the original"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:119
+msgid "too large to convert safely"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:120
+msgid "not enough time left in the request"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:121
+msgid "WordPress does not allow this file type"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:122
+msgid "a file is missing"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:123
+msgid "the server could not encode it"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:124
+msgid "WordPress could not save the change"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:125
+msgid "an error occurred"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:126
+msgid "WordPress has no data about this image"
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:127
+msgid "the old files were kept because the content could not be updated everywhere"
+msgstr ""
+
+#. translators: 1: number of images done, 2: number of images in total.
+#: includes/Admin/BulkPanel.php:131
+#, php-format
+msgid "Converting… %1$s of %2$s"
+msgstr ""
+
+#. translators: 1: converted, 2: skipped, 3: failed, 4: space saved, for example 3.2 MB.
+#: includes/Admin/BulkPanel.php:133
+#, php-format
+msgid "Done. Converted: %1$s. Skipped: %2$s. Failed: %3$s. Space saved: %4$s."
+msgstr ""
+
+#. translators: 1: converted, 2: skipped, 3: failed, 4: space saved, for example 3.2 MB.
+#: includes/Admin/BulkPanel.php:135
+#, php-format
+msgid "Stopped. Converted: %1$s. Skipped: %2$s. Failed: %3$s. Space saved: %4$s."
+msgstr ""
+
+#. translators: %s: number of images that got alt text.
+#: includes/Admin/BulkPanel.php:137
+#, php-format
+msgid "Alt text added: %1$s."
+msgstr ""
+
+#: includes/Admin/BulkPanel.php:138
+msgid "The request failed. Check your connection and try again. Images already converted stay converted."
+msgstr ""
+
+#. translators: 1: attachment ID, 2: file name, 3: result, for example Converted.
+#: includes/Admin/BulkPanel.php:140
+#, php-format
+msgid "#%1$s %2$s: %3$s"
+msgstr ""
+
+#. translators: 1: attachment ID, 2: file name, 3: result, for example Skipped, 4: reason.
+#: includes/Admin/BulkPanel.php:142
+#, php-format
+msgid "#%1$s %2$s: %3$s (%4$s)"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:54
+#: includes/Admin/SettingsPage.php:55
+msgid "Image Converter"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:100
+msgid "You do not have permission to access this page."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:112
+msgid "Warning:"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:113
+msgid "Converted images replace the originals. The original files and their resized copies are deleted from the server, and this cannot be undone. Back up your uploads folder and your database before converting images."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:117
+msgid "Server support"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:120
+msgid "Settings"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:125
+#: includes/Admin/SettingsPage.php:190
+msgid "Output format"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:129
+msgid "Quality"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:133
+#: includes/Admin/SettingsPage.php:275
+msgid "Image types"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:137
+msgid "Alt text"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:162
+msgid "Supported"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:162
+msgid "Not supported"
+msgstr ""
+
+#. translators: %s: name of the saved format, for example AVIF.
+#: includes/Admin/SettingsPage.php:183
+#, php-format
+msgid "The saved format (%s) is not supported on this server. Choose another format and save."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:223
+msgid "Your server cannot encode AVIF. It needs Imagick built with AVIF support, or GD built with AVIF support on PHP 8.1 or later."
+msgstr ""
+
+#. translators: %s: name of the format, for example WebP.
+#: includes/Admin/SettingsPage.php:228
+#, php-format
+msgid "Your server cannot encode %s."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:234
+msgid "Slower to encode than WebP."
+msgstr ""
+
+#. translators: 1: lowest quality, 2: highest quality, 3: default quality.
+#: includes/Admin/SettingsPage.php:259
+#, php-format
+msgid "%1$d to %2$d. Higher means better quality and larger files. Default: %3$d."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:282
+msgid "GIF and other image types are never converted."
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:297
+msgid "Fill empty alt text from the file name"
+msgstr ""
+
+#: includes/Admin/SettingsPage.php:303
+msgid "Alt text that is already set is never changed. File names that are not words, such as IMG_20260101_123456, are skipped. Applies to new uploads and to images processed by Convert existing images."
+msgstr ""
+
+#. translators: 1: required PHP version, 2: running PHP version.
+#: lunar-image-converter.php:71
+#, php-format
+msgid "Lunar Image Converter requires PHP %1$s or higher. This site runs PHP %2$s, so the plugin is inactive."
+msgstr ""
+
+#. translators: 1: required WordPress version, 2: running WordPress version.
+#: lunar-image-converter.php:78
+#, php-format
+msgid "Lunar Image Converter requires WordPress %1$s or higher. This site runs WordPress %2$s, so the plugin is inactive."
+msgstr ""
