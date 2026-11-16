@@ -72,6 +72,8 @@ The reply should contain `content-type: image/avif`.
   - the server cannot encode the format, or WordPress does not allow that file type.
 - All sizes of an image are converted together. If one file fails, none is replaced.
 - Each image gets a status (converted, skipped or failed) and a reason, stored in hidden post meta. Only converted images are never converted again; skipped and failed ones can be tried again.
+- **You can see what happened to each image.** In the media library, the list view has an *Image Converter* column, the attachment details and the edit screen show the status, and an image that should have been converted but was not shows why (for example, "Skipped (this server cannot encode the chosen format)"). An image that is only not smaller than the original is shown in the same way, but is not reported again.
+- **You are told when an upload was not converted.** The next admin page you open shows a notice that lists the uploaded images that were not converted and why. It works for every way of uploading, because the server remembers the result for the user who uploaded. It does not appear for images that are simply not smaller as WebP or AVIF, and it is shown once. A warning at the moment of upload, without leaving the page, is not available yet.
 - **While JPEG or PNG conversion is on, the plugin turns off WordPress 7.1's image processing in the browser**, so that all sizes are made on the server and converted together with the main file. If both types are off, WordPress is left alone.
 
 ## Convert existing images
@@ -123,7 +125,7 @@ The option name, the post meta keys, these two hooks, the AJAX actions and the s
 
 ## Removing the plugin
 
-Deleting the plugin removes its settings and the hidden status meta. Images that were converted stay converted; the plugin does not turn them back.
+Deleting the plugin removes its settings, the hidden status meta and the saved upload notices. Images that were converted stay converted; the plugin does not turn them back.
 
 ## Status and testing
 

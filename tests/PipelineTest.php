@@ -442,15 +442,70 @@ final class PipelineTest extends TestCase {
 		$this->assertSame( 0, $this->encoded );
 	}
 
-	public function test_a_format_the_server_cannot_encode_is_not_tried(): void {
+	public function test_a_format_the_server_cannot_encode_is_not_tried_and_the_reason_is_recorded(): void {
 		$this->supported = array( 'image/avif' );
 		$metadata        = $this->attach( 7 );
 
 		$result = $this->pipeline()->convert( 7, $metadata, Settings::DEFAULTS );
 
 		$this->assertSame( $metadata, $result );
-		$this->assertSame( array(), $this->gateway->records );
+		$this->assertSame(
+			array(
+				7 => array(
+					'status' => 'skipped',
+					'reason' => 'format_unsupported',
+					'saved'  => 0,
+				),
+			),
+			$this->gateway->records
+		);
 		$this->assertSame( 0, $this->encoded );
+		$this->assertSame( array(), $this->gateway->events );
+	}
+
+	public function test_an_unsupported_format_is_tried_again_by_a_later_run(): void {
+		$this->supported = array( 'image/avif' );
+		$metadata        = $this->attach( 7 );
+
+		$this->pipeline()->convert( 7, $metadata, Settings::DEFAULTS );
+
+		$this->supported = array( 'image/webp', 'image/avif' );
+		$this->pipeline()->convert( 7, $metadata, Settings::DEFAULTS );
+
+		$this->assertSame( 'converted', $this->gateway->records[7]['status'] );
+	}
+
+	public function test_an_image_type_that_is_turned_off_leaves_no_status(): void {
+		$metadata = $this->attach( 7 );
+		$settings = array_merge( Settings::DEFAULTS, array( 'convert_jpeg' => false ) );
+
+		$this->supported = array();
+
+		$this->assertSame( $metadata, $this->pipeline()->convert( 7, $metadata, $settings ) );
+		$this->assertSame( array(), $this->gateway->records );
+	}
+
+	public function test_mark_error_never_throws(): void {
+		$this->gateway->throwing_record = true;
+
+		$this->pipeline()->mark_error( 9 );
+
+		$this->assertSame( array(), $this->gateway->records );
+	}
+
+	public function test_mark_error_records_a_failure_with_the_error_reason(): void {
+		$this->pipeline()->mark_error( 9 );
+
+		$this->assertSame(
+			array(
+				9 => array(
+					'status' => 'failed',
+					'reason' => 'error',
+					'saved'  => 0,
+				),
+			),
+			$this->gateway->records
+		);
 	}
 
 	public function test_a_server_that_does_not_allow_the_mime_type_is_skipped(): void {

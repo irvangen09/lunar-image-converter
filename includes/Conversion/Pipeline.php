@@ -36,6 +36,8 @@ final class Pipeline {
 	public const REASON_NO_METADATA      = 'no_metadata';
 	public const REASON_OLD_FILES_KEPT   = 'old_files_kept';
 
+	public const REASON_FORMAT_UNSUPPORTED = 'format_unsupported';
+
 	/**
 	 * Largest image, in megapixels, per output format.
 	 */
@@ -52,7 +54,7 @@ final class Pipeline {
 	/**
 	 * Settings toggle that allows each source type.
 	 */
-	private const SOURCE_TOGGLES = array(
+	public const SOURCE_TOGGLES = array(
 		'image/jpeg' => 'convert_jpeg',
 		'image/png'  => 'convert_png',
 	);
@@ -105,7 +107,7 @@ final class Pipeline {
 		$format = (string) ( $settings['output_format'] ?? '' );
 
 		if ( ! $this->environment->supports( $format ) ) {
-			return $metadata;
+			return $this->stop( $attachment_id, self::STATUS_SKIPPED, self::REASON_FORMAT_UNSUPPORTED, array(), $metadata );
 		}
 
 		$target   = Environment::FORMATS[ $format ]['mime'];
@@ -229,6 +231,21 @@ final class Pipeline {
 		$this->gateway->converted( $attachment_id, $path_map );
 
 		return $new_metadata;
+	}
+
+	/**
+	 * Records that an unexpected error ended the conversion of an attachment.
+	 *
+	 * Never throws: it is called from code that must not fail an upload.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function mark_error( int $attachment_id ): void {
+		try {
+			$this->gateway->record( $attachment_id, self::STATUS_FAILED, self::REASON_ERROR, 0 );
+		} catch ( \Throwable ) {
+			return;
+		}
 	}
 
 	/**

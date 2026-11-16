@@ -102,6 +102,15 @@ final class FakeGateway implements Gateway {
 
 	public bool $throwing_alt_text = false;
 
+	/**
+	 * Attachment IDs whose mime() call throws.
+	 *
+	 * @var int[]
+	 */
+	public array $throwing_mime = array();
+
+	public bool $throwing_record = false;
+
 	public bool $replace_succeeds = true;
 
 	public bool $switch_succeeds = true;
@@ -134,6 +143,10 @@ final class FakeGateway implements Gateway {
 	}
 
 	public function mime( int $attachment_id ): string {
+		if ( in_array( $attachment_id, $this->throwing_mime, true ) ) {
+			throw new \RuntimeException( 'No mime.' );
+		}
+
 		return $this->posts[ $attachment_id ]['mime'] ?? '';
 	}
 
@@ -150,6 +163,10 @@ final class FakeGateway implements Gateway {
 	}
 
 	public function record( int $attachment_id, string $status, string $reason, int $saved_bytes ): void {
+		if ( $this->throwing_record ) {
+			throw new \RuntimeException( 'Cannot record.' );
+		}
+
 		$this->records[ $attachment_id ]         = array(
 			'status' => $status,
 			'reason' => $reason,
