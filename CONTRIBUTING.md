@@ -54,6 +54,27 @@ npm run lint:css
 
 PHPUnit tests live in `tests/` and run without WordPress; WordPress calls go through `Conversion\Gateway` so that logic can be tested with `tests/FakeGateway.php`. A change that alters behavior needs a test that fails without the change. Tests must not depend on the PHPUnit version: no attributes and no `@dataProvider`; loop over cases inside one test.
 
+## Translations
+
+Interface text is translated with the `lunar-image-converter` text domain. The files are in `languages/`: the template `lunar-image-converter.pot`, and for each language a `.po` file (the text you edit) and a `.mo` file (the compiled file WordPress reads). All three are committed. Today there is `id_ID`.
+
+After you change any translatable text in the code, regenerate the template and update the translations with [WP-CLI](https://wp-cli.org/):
+
+```
+wp i18n make-pot . languages/lunar-image-converter.pot --domain=lunar-image-converter --slug=lunar-image-converter --exclude=tests,node_modules,vendor,languages
+wp i18n update-po languages/lunar-image-converter.pot languages
+```
+
+Translate the new entries in the `.po` file, then compile:
+
+```
+wp i18n make-mo languages
+```
+
+Check that `Report-Msgid-Bugs-To` in the `.pot` header is still `https://github.com/irvangen09/lunar-image-converter/issues`; WP-CLI otherwise writes a WordPress.org address.
+
+To add a language, copy the `.pot` to `languages/lunar-image-converter-<locale>.po` (for example `de_DE`), translate it, set the `Language` header, and run `wp i18n make-mo languages`. The tests check that the template has every string the code uses, that a `.po` file has no empty translation and keeps the placeholders (`%s`, `%1$d`) of the original,, and that the `.mo` matches the `.po`. They pick up a new language file by themselves.
+
 ## What stays stable
 
 After the first public release these will not change without a major version: the option `lunar_image_converter_settings` and its keys, the hidden post meta keys and status and reason values, the action `lunar_image_converter_converted`, the filter `lunar_image_converter_max_megapixels`, and the AJAX action and scope names used by the bulk converter. Please keep them in mind when you propose a change.

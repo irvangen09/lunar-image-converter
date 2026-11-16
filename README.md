@@ -89,6 +89,10 @@ When *Fill empty alt text from the file name* is on, an image without alt text g
 
 `chibi-reference-sheet-scaled.jpg` becomes `chibi reference sheet`. The file extension, WordPress suffixes (`-scaled`, `-300x200`, `-1`), numbers, dates and camera prefixes (`IMG`, `DSC`, `PXL`) are dropped. A name that says nothing, such as `IMG_20260101_123456` or `WhatsApp Image 2026-01-01 at 10.00.00`, gets no alt text, because a meaningless alt text is worse for screen reader users than an empty one.
 
+## Languages
+
+The interface is in English and comes with an Indonesian translation (`id_ID`). It is used when the site language, or the user's own language in their profile, is Indonesian. To add another language, see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
+
 ## Other image optimization plugins
 
 Use only one tool that converts your images. Plugins that generate WebP or AVIF copies or rewrite image addresses (LiteSpeed Cache's image optimization, for example) can conflict with this one; turn off that part in the other plugin. Combining this plugin with LiteSpeed Cache has not been tested yet.
