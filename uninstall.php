@@ -17,6 +17,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 	$delete_site_data = static function () {
 		delete_option( 'lunar_image_converter_settings' );
+		delete_transient( 'lunar_image_converter_server_check' );
 		delete_post_meta_by_key( '_lunar_image_converter_status' );
 		delete_post_meta_by_key( '_lunar_image_converter_reason' );
 		delete_post_meta_by_key( '_lunar_image_converter_saved' );

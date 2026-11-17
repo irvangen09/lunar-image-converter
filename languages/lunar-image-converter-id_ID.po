@@ -184,19 +184,19 @@ msgstr "%1$s (%2$s)"
 
 #: includes/Admin/MediaStatus.php:132 includes/Admin/MediaStatus.php:159
 #: includes/Admin/MediaStatus.php:179 includes/Admin/MediaStatus.php:186
-#: includes/Admin/SettingsPage.php:54 includes/Admin/SettingsPage.php:55
+#: includes/Admin/SettingsPage.php:69 includes/Admin/SettingsPage.php:70
 msgid "Image Converter"
 msgstr "Konverter Gambar"
 
-#: includes/Admin/SettingsPage.php:100
+#: includes/Admin/SettingsPage.php:154
 msgid "You do not have permission to access this page."
 msgstr "Anda tidak memiliki izin untuk mengakses halaman ini."
 
-#: includes/Admin/SettingsPage.php:112
+#: includes/Admin/SettingsPage.php:166
 msgid "Warning:"
 msgstr "Peringatan:"
 
-#: includes/Admin/SettingsPage.php:113
+#: includes/Admin/SettingsPage.php:167
 msgid ""
 "Converted images replace the originals. The original files and their resized"
 " copies are deleted from the server, and this cannot be undone. Back up your"
@@ -206,40 +206,46 @@ msgstr ""
 "ukurannya dihapus dari server, dan ini tidak dapat dibatalkan. Cadangkan "
 "folder uploads dan database Anda sebelum mengonversi gambar."
 
-#: includes/Admin/SettingsPage.php:117
+#: includes/Admin/SettingsPage.php:171
 msgid "Server support"
 msgstr "Dukungan server"
 
-#: includes/Admin/SettingsPage.php:120
+#: includes/Admin/SettingsPage.php:174
 msgid "Settings"
 msgstr "Pengaturan"
 
-#: includes/Admin/SettingsPage.php:125 includes/Admin/SettingsPage.php:190
+#: includes/Admin/SettingsPage.php:179 includes/Admin/SettingsPage.php:280
 msgid "Output format"
 msgstr "Format keluaran"
 
-#: includes/Admin/SettingsPage.php:129
+#: includes/Admin/SettingsPage.php:183
 msgid "Quality"
 msgstr "Kualitas"
 
-#: includes/Admin/SettingsPage.php:133 includes/Admin/SettingsPage.php:275
+#: includes/Admin/SettingsPage.php:187 includes/Admin/SettingsPage.php:365
 msgid "Image types"
 msgstr "Jenis gambar"
 
-#: includes/Admin/SettingsPage.php:137
+#: includes/Admin/SettingsPage.php:191
 msgid "Alt text"
 msgstr "Teks alternatif"
 
-#: includes/Admin/SettingsPage.php:162
-msgid "Supported"
-msgstr "Didukung"
+#: includes/Admin/SettingsPage.php:220
+msgid "AVIF delivery"
+msgstr "Pengiriman AVIF"
 
-#: includes/Admin/SettingsPage.php:162
-msgid "Not supported"
-msgstr "Tidak didukung"
+#. translators: %s: how long ago the server tests ran, for example 5 minutes.
+#: includes/Admin/SettingsPage.php:232
+#, php-format
+msgid "Tested %s ago."
+msgstr "Diuji %s yang lalu."
+
+#: includes/Admin/SettingsPage.php:237
+msgid "Check again"
+msgstr "Periksa lagi"
 
 #. translators: %s: name of the saved format, for example AVIF.
-#: includes/Admin/SettingsPage.php:183
+#: includes/Admin/SettingsPage.php:273
 #, php-format
 msgid ""
 "The saved format (%s) is not supported on this server. Choose another format"
@@ -248,7 +254,7 @@ msgstr ""
 "Format yang tersimpan (%s) tidak didukung di server ini. Pilih format lain "
 "dan simpan."
 
-#: includes/Admin/SettingsPage.php:223
+#: includes/Admin/SettingsPage.php:313
 msgid ""
 "Your server cannot encode AVIF. It needs Imagick built with AVIF support, or"
 " GD built with AVIF support on PHP 8.1 or later."
@@ -258,17 +264,17 @@ msgstr ""
 "pada PHP 8.1 atau lebih baru."
 
 #. translators: %s: name of the format, for example WebP.
-#: includes/Admin/SettingsPage.php:228
+#: includes/Admin/SettingsPage.php:318
 #, php-format
 msgid "Your server cannot encode %s."
 msgstr "Server Anda tidak dapat mengenkode %s."
 
-#: includes/Admin/SettingsPage.php:234
+#: includes/Admin/SettingsPage.php:324
 msgid "Slower to encode than WebP."
 msgstr "Lebih lambat dienkode daripada WebP."
 
 #. translators: 1: lowest quality, 2: highest quality, 3: default quality.
-#: includes/Admin/SettingsPage.php:259
+#: includes/Admin/SettingsPage.php:349
 #, php-format
 msgid ""
 "%1$d to %2$d. Higher means better quality and larger files. Default: %3$d."
@@ -276,15 +282,15 @@ msgstr ""
 "%1$d sampai %2$d. Semakin tinggi berarti kualitas lebih baik dan file lebih "
 "besar. Bawaan: %3$d."
 
-#: includes/Admin/SettingsPage.php:282
+#: includes/Admin/SettingsPage.php:372
 msgid "GIF and other image types are never converted."
 msgstr "GIF dan jenis gambar lain tidak pernah dikonversi."
 
-#: includes/Admin/SettingsPage.php:297
+#: includes/Admin/SettingsPage.php:387
 msgid "Fill empty alt text from the file name"
 msgstr "Isi teks alternatif yang kosong dari nama file"
 
-#: includes/Admin/SettingsPage.php:303
+#: includes/Admin/SettingsPage.php:393
 msgid ""
 "Alt text that is already set is never changed. File names that are not "
 "words, such as IMG_20260101_123456, are skipped. Applies to new uploads and "
@@ -360,6 +366,95 @@ msgstr ""
 #: includes/Admin/StatusText.php:51
 msgid "this server cannot encode the chosen format"
 msgstr "server ini tidak dapat mengenkode format yang dipilih"
+
+#: includes/Admin/SupportText.php:35
+msgid "Works. A test image was encoded."
+msgstr "Berfungsi. Gambar uji berhasil dienkode."
+
+#. translators: %s: name of the format, for example AVIF.
+#: includes/Admin/SupportText.php:42
+#, php-format
+msgid ""
+"The server says it supports %s, but a test image could not be encoded. "
+"Conversion will probably fail."
+msgstr ""
+"Server menyatakan mendukung %s, tetapi gambar uji tidak dapat dienkode. "
+"Konversi kemungkinan besar akan gagal."
+
+#. translators: %s: name of the format, for example AVIF.
+#: includes/Admin/SupportText.php:49
+#, php-format
+msgid ""
+"The server says it supports %s, but the test file it wrote was empty. "
+"Conversion will probably fail."
+msgstr ""
+"Server menyatakan mendukung %s, tetapi file uji yang ditulisnya kosong. "
+"Konversi kemungkinan besar akan gagal."
+
+#. translators: %s: name of the format, for example AVIF.
+#: includes/Admin/SupportText.php:57
+#, php-format
+msgid ""
+"The server says it supports %s, but the test file was not recognized as an "
+"image. Conversion will probably fail."
+msgstr ""
+"Server menyatakan mendukung %s, tetapi file uji tidak dikenali sebagai "
+"gambar. Konversi kemungkinan besar akan gagal."
+
+#. translators: 1: name of the format, for example AVIF, 2: file type that was
+#. found, for example image/png.
+#: includes/Admin/SupportText.php:64
+#, php-format
+msgid ""
+"The server says it supports %1$s, but the test file was recognized as %2$s. "
+"Conversion will probably fail."
+msgstr ""
+"Server menyatakan mendukung %1$s, tetapi file uji dikenali sebagai %2$s. "
+"Konversi kemungkinan besar akan gagal."
+
+#: includes/Admin/SupportText.php:70
+msgid "Not supported"
+msgstr "Tidak didukung"
+
+#: includes/Admin/SupportText.php:76
+msgid "Not tested"
+msgstr "Belum diuji"
+
+#: includes/Admin/SupportText.php:93
+msgid "Correct. The server sends AVIF files as image/avif."
+msgstr "Benar. Server mengirim file AVIF sebagai image/avif."
+
+#: includes/Admin/SupportText.php:97
+msgid ""
+"Browsers will not show AVIF images. Fix the MIME type for AVIF files (the "
+"README explains how), clear your caches and check again."
+msgstr ""
+"Browser tidak akan menampilkan gambar AVIF. Perbaiki MIME type untuk file "
+"AVIF (README menjelaskan caranya), bersihkan cache Anda, lalu periksa lagi."
+
+#: includes/Admin/SupportText.php:102
+msgid "Wrong. The server sends AVIF files without a content type."
+msgstr "Salah. Server mengirim file AVIF tanpa content type."
+
+#. translators: %s: content type the server sent, for example text/html.
+#: includes/Admin/SupportText.php:109
+#, php-format
+msgid "Wrong. The server sends AVIF files as %s, not as image/avif."
+msgstr ""
+"Salah. Server mengirim file AVIF sebagai %s, bukan sebagai image/avif."
+
+#. translators: %s: HTTP status code, for example 404.
+#: includes/Admin/SupportText.php:116
+#, php-format
+msgid "Could not check. The test AVIF file answered with HTTP status %s."
+msgstr "Tidak dapat diperiksa. File AVIF uji dijawab dengan status HTTP %s."
+
+#. translators: %s: error message.
+#: includes/Admin/SupportText.php:123
+#, php-format
+msgid "Could not check. The site could not fetch its own test file: %s"
+msgstr ""
+"Tidak dapat diperiksa. Situs tidak dapat mengambil file ujinya sendiri: %s"
 
 #. translators: %s: output format, for example AVIF.
 #: includes/Admin/UploadNotice.php:130

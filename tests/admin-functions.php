@@ -163,3 +163,19 @@ function wp_enqueue_script( string $handle, string $src, array $deps, string $ve
 		'in_footer' => $in_footer,
 	);
 }
+
+/**
+ * @param string $nonce  Nonce to check.
+ * @param string $action Action the nonce was made for.
+ * @return int|false
+ */
+function wp_verify_nonce( string $nonce, string $action ) {
+	return AdminStub::$valid_nonce === $nonce && '' !== $action ? 1 : false;
+}
+
+/**
+ * @param string $text Text.
+ */
+function sanitize_text_field( string $text ): string {
+	return trim( $text );
+}

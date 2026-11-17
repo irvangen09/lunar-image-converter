@@ -49,6 +49,11 @@ final class AdminStub {
 	public static bool $can_edit = true;
 
 	/**
+	 * The only nonce that wp_verify_nonce accepts.
+	 */
+	public static string $valid_nonce = 'good-nonce';
+
+	/**
 	 * Resets the state before a test.
 	 */
 	public static function reset(): void {
@@ -60,5 +65,6 @@ final class AdminStub {
 		self::$rest_fields = array();
 		self::$scripts     = array();
 		self::$can_edit    = true;
+		self::$valid_nonce = 'good-nonce';
 	}
 }
