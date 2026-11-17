@@ -30,13 +30,35 @@ final class AdminStub {
 	public static array $hooks = array();
 
 	/**
+	 * Fields added to the REST API, by object type and field name.
+	 *
+	 * @var array<string, array<string, mixed>>
+	 */
+	public static array $rest_fields = array();
+
+	/**
+	 * Scripts that were loaded, by handle.
+	 *
+	 * @var array<string, array<string, mixed>>
+	 */
+	public static array $scripts = array();
+
+	/**
+	 * Whether the current user may edit posts.
+	 */
+	public static bool $can_edit = true;
+
+	/**
 	 * Resets the state before a test.
 	 */
 	public static function reset(): void {
-		self::$user_id   = 1;
-		self::$blog_id   = 1;
-		self::$now       = 0;
-		self::$user_meta = array();
-		self::$hooks     = array();
+		self::$user_id     = 1;
+		self::$blog_id     = 1;
+		self::$now         = 0;
+		self::$user_meta   = array();
+		self::$hooks       = array();
+		self::$rest_fields = array();
+		self::$scripts     = array();
+		self::$can_edit    = true;
 	}
 }

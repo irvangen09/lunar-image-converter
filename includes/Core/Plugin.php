@@ -12,6 +12,7 @@ use LunarImageConverter\Admin\BulkPanel;
 use LunarImageConverter\Admin\MediaStatus;
 use LunarImageConverter\Admin\SettingsPage;
 use LunarImageConverter\Admin\UploadNotice;
+use LunarImageConverter\Admin\UploadWarning;
 use LunarImageConverter\Conversion\Converter;
 use LunarImageConverter\Conversion\Pipeline;
 use LunarImageConverter\Conversion\UploadHandler;
@@ -41,6 +42,8 @@ final class Plugin {
 
 	private UploadNotice $upload_notice;
 
+	private UploadWarning $upload_warning;
+
 	/**
 	 * @param Settings       $settings        Plugin settings.
 	 * @param SettingsPage   $settings_page   Settings page under Media.
@@ -49,8 +52,9 @@ final class Plugin {
 	 * @param AltText        $alt_text        Fills empty alt text from file names.
 	 * @param MediaStatus    $media_status    Shows the conversion status in the media library.
 	 * @param UploadNotice   $upload_notice   Reports uploads that were not converted.
+	 * @param UploadWarning  $upload_warning  Warns right after an upload that an image was not converted.
 	 */
-	public function __construct( Settings $settings, SettingsPage $settings_page, UploadHandler $upload_handler, BulkController $bulk_controller, AltText $alt_text, MediaStatus $media_status, UploadNotice $upload_notice ) {
+	public function __construct( Settings $settings, SettingsPage $settings_page, UploadHandler $upload_handler, BulkController $bulk_controller, AltText $alt_text, MediaStatus $media_status, UploadNotice $upload_notice, UploadWarning $upload_warning ) {
 		$this->settings        = $settings;
 		$this->settings_page   = $settings_page;
 		$this->upload_handler  = $upload_handler;
@@ -58,6 +62,7 @@ final class Plugin {
 		$this->alt_text        = $alt_text;
 		$this->media_status    = $media_status;
 		$this->upload_notice   = $upload_notice;
+		$this->upload_warning  = $upload_warning;
 	}
 
 	/**
@@ -78,7 +83,8 @@ final class Plugin {
 			new BulkController( $settings, $pipeline, $gateway, $environment, $alt_text ),
 			$alt_text,
 			$status,
-			new UploadNotice( $gateway, $status, $settings )
+			new UploadNotice( $gateway, $status, $settings ),
+			new UploadWarning( $gateway, $status, $settings )
 		);
 	}
 
@@ -92,6 +98,7 @@ final class Plugin {
 		$this->upload_handler->register();
 		$this->alt_text->register();
 		$this->upload_notice->register();
+		$this->upload_warning->register();
 
 		if ( is_admin() ) {
 			$this->settings_page->register();

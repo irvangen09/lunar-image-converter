@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The conversion status of an image is shown in the media library: an *Image Converter* column in the list view, a line in the attachment details and in the Save box of the edit screen. An image that could be converted but was not shows "Not converted yet".
 - A notice on the next admin page tells the user who uploaded images that were not converted, with the reason for each. Images that are only not smaller than the original are not reported. The notices are saved per user and removed on uninstall.
 - A new reason, `format_unsupported`, is recorded when the saved output format cannot be encoded by the server. Such an image can be retried from Convert existing images once the format works.
+- A warning at the moment of upload, without leaving the page, when an image was not converted: in the media library (grid), in the media window of the editors, in the block editor and on the Add Media File page. It is shown for the same cases as the notice, and says the output format and the reason. The result is sent in the answer the server already gives to an upload, so uploading makes no extra request. The answer to a REST upload has a new read-only field `lunar_image_converter` (only in the edit context).
 
 ### Changed
 

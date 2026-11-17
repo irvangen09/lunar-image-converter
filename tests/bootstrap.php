@@ -10,6 +10,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', dirname( __DIR__ ) . '/' ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound
 }
 
+if ( ! defined( 'LUNAR_IMAGE_CONVERTER_URL' ) ) {
+	define( 'LUNAR_IMAGE_CONVERTER_URL', 'https://example.test/wp-content/plugins/lunar-image-converter/' );
+	define( 'LUNAR_IMAGE_CONVERTER_VERSION', '1.2.3' );
+}
+
 require_once dirname( __DIR__ ) . '/includes/Core/Autoloader.php';
 
 ( new \LunarImageConverter\Core\Autoloader( dirname( __DIR__ ) . '/includes/' ) )->register();

@@ -119,3 +119,47 @@ function add_action( string $name, $callback, int $priority = 10 ): bool {
 function time(): int {
 	return 0 === AdminStub::$now ? \time() : AdminStub::$now;
 }
+
+/**
+ * @param string               $type Object type.
+ * @param string               $name Field name.
+ * @param array<string, mixed> $args Field arguments.
+ */
+function register_rest_field( string $type, string $name, array $args ): void {
+	AdminStub::$rest_fields[ $type ][ $name ] = $args;
+}
+
+function current_user_can(): bool {
+	return AdminStub::$can_edit;
+}
+
+/**
+ * @param mixed $value Value.
+ */
+function absint( $value ): int {
+	return abs( (int) $value );
+}
+
+/**
+ * @param mixed $value Value.
+ * @return mixed
+ */
+function wp_unslash( $value ) {
+	return $value;
+}
+
+/**
+ * @param string   $handle    Script handle.
+ * @param string   $src       Script URL.
+ * @param string[] $deps      Script handles it needs.
+ * @param string   $version   Version.
+ * @param bool     $in_footer Whether it loads in the footer.
+ */
+function wp_enqueue_script( string $handle, string $src, array $deps, string $version, bool $in_footer ): void {
+	AdminStub::$scripts[ $handle ] = array(
+		'src'       => $src,
+		'deps'      => $deps,
+		'version'   => $version,
+		'in_footer' => $in_footer,
+	);
+}
