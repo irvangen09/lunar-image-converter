@@ -9,6 +9,7 @@ namespace LunarImageConverter\Admin;
 
 use LunarImageConverter\Settings\Settings;
 use LunarImageConverter\Support\Environment;
+use LunarImageConverter\Support\ServerCheck;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -19,11 +20,23 @@ final class SettingsPage {
 
 	public const SLUG = 'lunar-image-converter';
 
+	/**
+	 * Name of the nonce action and of the button that runs the server tests again.
+	 */
+	public const CHECK_ACTION = 'lunar_image_converter_check';
+
+	/**
+	 * Name of the field that tells the page to run the server tests again.
+	 */
+	public const CHECK_FIELD = 'lunar_image_converter_check_again';
+
 	private Settings $settings;
 
 	private Environment $environment;
 
 	private BulkPanel $bulk_panel;
+
+	private ServerCheck $server_check;
 
 	private string $hook_suffix = '';
 
@@ -31,11 +44,13 @@ final class SettingsPage {
 	 * @param Settings    $settings    Plugin settings.
 	 * @param Environment $environment Server support for the output formats.
 	 * @param BulkPanel   $bulk_panel  Bulk conversion section.
+	 * @param ServerCheck $server_check Tests what the server really does.
 	 */
-	public function __construct( Settings $settings, Environment $environment, BulkPanel $bulk_panel ) {
-		$this->settings    = $settings;
-		$this->environment = $environment;
-		$this->bulk_panel  = $bulk_panel;
+	public function __construct( Settings $settings, Environment $environment, BulkPanel $bulk_panel, ServerCheck $server_check ) {
+		$this->settings     = $settings;
+		$this->environment  = $environment;
+		$this->bulk_panel   = $bulk_panel;
+		$this->server_check = $server_check;
 	}
 
 	/**
@@ -59,6 +74,45 @@ final class SettingsPage {
 		);
 
 		$this->hook_suffix = is_string( $hook_suffix ) ? $hook_suffix : '';
+
+		if ( '' !== $this->hook_suffix ) {
+			add_action( 'load-' . $this->hook_suffix, array( $this, 'handle_check_again' ) );
+		}
+	}
+
+	/**
+	 * Runs the server tests again when the person asked for it, then shows the page with the new results.
+	 */
+	public function handle_check_again(): void {
+		if ( ! $this->check_again_requested() ) {
+			return;
+		}
+
+		$this->server_check->refresh();
+
+		wp_safe_redirect( $this->page_url() );
+		exit;
+	}
+
+	/**
+	 * Tells whether the request is a valid ask to run the server tests again.
+	 */
+	public function check_again_requested(): bool {
+		// The nonce is checked here, so reading the field first only decides whether there is anything to check.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing
+		if ( ! isset( $_POST[ self::CHECK_FIELD ], $_POST['_wpnonce'] ) || ! current_user_can( 'manage_options' ) ) {
+			return false;
+		}
+
+		return false !== wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), self::CHECK_ACTION );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+	}
+
+	/**
+	 * Returns the address of this page.
+	 */
+	private function page_url(): string {
+		return admin_url( 'upload.php?page=' . self::SLUG );
 	}
 
 	/**
@@ -147,23 +201,59 @@ final class SettingsPage {
 	}
 
 	/**
-	 * Lists whether the server can encode each format.
+	 * Lists what the server can really do: a test image is encoded in each format, and AVIF files are fetched.
 	 */
 	private function render_support(): void {
+		$results = $this->server_check->results();
+
 		echo '<ul class="lic-status">';
 
 		foreach ( array_keys( Environment::FORMATS ) as $format ) {
-			$supported = $this->environment->supports( $format );
+			$line = SupportText::encode( $format, $results['encode'][ $format ] ?? array() );
 
-			printf(
-				'<li>%1$s: <span class="lic-status__state lic-status__state--%2$s">%3$s</span></li>',
-				esc_html( Environment::label( $format ) ),
-				esc_attr( $supported ? 'ok' : 'no' ),
-				esc_html( $supported ? __( 'Supported', 'lunar-image-converter' ) : __( 'Not supported', 'lunar-image-converter' ) )
-			);
+			$this->render_support_line( Environment::label( $format ), $line['style'], $line['text'] );
+		}
+
+		$delivery = SupportText::delivery( $results['delivery'] );
+
+		if ( array() !== $delivery ) {
+			$this->render_support_line( __( 'AVIF delivery', 'lunar-image-converter' ), $delivery['style'] ?? 'unknown', $delivery['text'] ?? '' );
 		}
 
 		echo '</ul>';
+		?>
+		<form action="<?php echo esc_url( $this->page_url() ); ?>" method="post" class="lic-check">
+			<?php wp_nonce_field( self::CHECK_ACTION ); ?>
+			<p>
+				<?php
+				echo esc_html(
+					sprintf(
+						/* translators: %s: how long ago the server tests ran, for example 5 minutes. */
+						__( 'Tested %s ago.', 'lunar-image-converter' ),
+						human_time_diff( (int) $results['checked'] )
+					)
+				);
+				?>
+				<button type="submit" class="button" name="<?php echo esc_attr( self::CHECK_FIELD ); ?>" value="1"><?php esc_html_e( 'Check again', 'lunar-image-converter' ); ?></button>
+			</p>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Outputs one line of the server tests.
+	 *
+	 * @param string $label Name of what was tested.
+	 * @param string $style `ok`, `no` or `unknown`.
+	 * @param string $text  Result.
+	 */
+	private function render_support_line( string $label, string $style, string $text ): void {
+		printf(
+			'<li>%1$s: <span class="lic-status__state lic-status__state--%2$s">%3$s</span></li>',
+			esc_html( $label ),
+			esc_attr( $style ),
+			esc_html( $text )
+		);
 	}
 
 	/**

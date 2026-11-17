@@ -25,7 +25,7 @@ The attachment ID never changes, so featured images, galleries and anything else
 
 - WordPress 7.0 or later
 - PHP 8.1 or later
-- A server that can encode the format you choose. WordPress uses Imagick or GD, whichever it finds. The settings page shows what your server supports.
+- A server that can encode the format you choose. WordPress uses Imagick or GD, whichever it finds. The settings page tests it with a small image, so it shows what your server really does, not only what it claims.
   - WebP needs Imagick or GD with WebP support.
   - AVIF needs Imagick built with AVIF support, or GD built with AVIF support on PHP 8.1 or later.
 - Your web server must send the right `Content-Type` for the format you choose (`image/webp` or `image/avif`).
@@ -61,6 +61,36 @@ curl.exe -I https://example.com/wp-content/uploads/2026/11/example.avif
 ```
 
 The reply should contain `content-type: image/avif`.
+
+The settings page runs two checks for you, under *Server support*:
+
+- **Whether each format can be made.** The plugin encodes a small test image and reads the file it gets. "Works" means a real file came out. If the image library says it supports AVIF but the test fails, it says so: the library is built without a working AVIF encoder (common with Imagick on a local Windows setup or on shared hosting). Conversion to AVIF will fail there. Use WebP, or ask your host.
+- **Whether the server sends AVIF files correctly.** The site fetches a small AVIF file from its own address and reads the `Content-Type`. If it is not `image/avif`, browsers do not show the images. "Could not check" does not mean the server is wrong: a firewall, a security plugin or a server that cannot reach its own address can block the test. Use the `curl.exe` command above instead.
+
+The checks only inform. They never stop a conversion. The results are kept for 12 hours (10 minutes if the site could not reach itself); press *Check again* after you change something. The test file is fetched with a changing query, so a cache that still holds an old answer for your real images is not seen: clear it too.
+
+### Sending AVIF with the right type
+
+If the page says AVIF is sent as another type, add the type `image/avif` for the extension `avif`:
+
+- **cPanel:** *MIME Types*, then type `image/avif` and extension `avif`, and add it. The type must be `image/avif`; `image/webp` or `application/octet-stream` is wrong.
+- **Apache and LiteSpeed:** add this to `.htaccess`, outside the `# BEGIN WordPress` and `# END WordPress` lines, which WordPress rewrites:
+
+  ```
+  <IfModule mod_mime.c>
+  	AddType image/avif .avif
+  </IfModule>
+  ```
+
+- **nginx:** add `image/avif avif;` to `mime.types`, or add this to the server block:
+
+  ```
+  location ~* \.avif$ {
+  	default_type image/avif;
+  }
+  ```
+
+Then clear every cache between your server and the visitor: your caching plugin (for example LiteSpeed Cache: purge all) and Cloudflare or another CDN (purge the cache or the URLs). A CDN keeps the old `Content-Type` of a file it already has. Press *Check again* and test one of your own images with the command above.
 
 ## How conversion works
 
@@ -126,7 +156,7 @@ The option name, the post meta keys, these two hooks, the AJAX actions and the s
 
 ## Removing the plugin
 
-Deleting the plugin removes its settings, the hidden status meta and the saved upload notices. Images that were converted stay converted; the plugin does not turn them back.
+Deleting the plugin removes its settings, the hidden status meta, the saved upload notices and the saved server test results. Images that were converted stay converted; the plugin does not turn them back.
 
 ## Status and testing
 

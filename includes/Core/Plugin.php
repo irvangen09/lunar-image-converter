@@ -20,6 +20,7 @@ use LunarImageConverter\Conversion\WpGateway;
 use LunarImageConverter\Media\AltText;
 use LunarImageConverter\Settings\Settings;
 use LunarImageConverter\Support\Environment;
+use LunarImageConverter\Support\ServerCheck;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -72,13 +73,15 @@ final class Plugin {
 		$settings    = new Settings();
 		$environment = new Environment();
 		$gateway     = new WpGateway();
-		$pipeline    = new Pipeline( new Converter(), $gateway, $environment );
+		$converter   = new Converter();
+		$pipeline    = new Pipeline( $converter, $gateway, $environment );
 		$alt_text    = new AltText( $settings, $gateway );
 		$status      = new MediaStatus( $gateway, $settings );
+		$check       = new ServerCheck( $environment, $converter, $gateway, LUNAR_IMAGE_CONVERTER_PATH, LUNAR_IMAGE_CONVERTER_URL );
 
 		return new self(
 			$settings,
-			new SettingsPage( $settings, $environment, new BulkPanel( $settings, $environment ) ),
+			new SettingsPage( $settings, $environment, new BulkPanel( $settings, $environment ), $check ),
 			new UploadHandler( $settings, $pipeline ),
 			new BulkController( $settings, $pipeline, $gateway, $environment, $alt_text ),
 			$alt_text,

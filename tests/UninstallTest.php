@@ -10,6 +10,7 @@ namespace LunarImageConverter\Tests;
 use LunarImageConverter\Admin\UploadNotice;
 use LunarImageConverter\Conversion\WpGateway;
 use LunarImageConverter\Settings\Settings;
+use LunarImageConverter\Support\ServerCheck;
 use PHPUnit\Framework\TestCase;
 
 final class UninstallTest extends TestCase {
@@ -40,6 +41,15 @@ final class UninstallTest extends TestCase {
 		$this->assertSame( 1, substr_count( $this->script, $call ) );
 		$this->assertLessThan( strpos( $this->script, 'is_multisite()' ), strpos( $this->script, $call ), 'The call must run once, before the per-site loop.' );
 		$this->assertStringStartsWith( '_lunar_image_converter_', UploadNotice::META_KEY );
+	}
+
+	public function test_deletes_the_saved_server_test_results_of_every_site(): void {
+		$call = "delete_transient( '" . ServerCheck::TRANSIENT . "' )";
+
+		$this->assertSame( 1, substr_count( $this->script, $call ) );
+		$this->assertGreaterThan( strpos( $this->script, 'is_multisite()' ) - 400, strpos( $this->script, $call ) );
+		$this->assertLessThan( strpos( $this->script, 'is_multisite()' ), strpos( $this->script, $call ), 'The call must be in the per-site cleanup.' );
+		$this->assertStringStartsWith( 'lunar_image_converter_', ServerCheck::TRANSIENT );
 	}
 
 	public function test_meta_keys_use_the_plugin_prefix(): void {
