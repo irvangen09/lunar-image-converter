@@ -1,5 +1,4 @@
-# Copyright (C) 2026 Irvan Noerfazri
-# This file is distributed under the GPL-2.0-or-later.
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: Lunar Image Converter 0.1.0\n"
@@ -183,8 +182,8 @@ msgstr "Dikonversi. Ruang dihemat: %s."
 msgid "%1$s (%2$s)"
 msgstr "%1$s (%2$s)"
 
-#: includes/Admin/MediaStatus.php:127 includes/Admin/MediaStatus.php:154
-#: includes/Admin/MediaStatus.php:174 includes/Admin/MediaStatus.php:181
+#: includes/Admin/MediaStatus.php:132 includes/Admin/MediaStatus.php:159
+#: includes/Admin/MediaStatus.php:179 includes/Admin/MediaStatus.php:186
 #: includes/Admin/SettingsPage.php:54 includes/Admin/SettingsPage.php:55
 msgid "Image Converter"
 msgstr "Konverter Gambar"
@@ -383,6 +382,36 @@ msgstr "Lihat status setiap gambar di pustaka media"
 #, php-format
 msgid "%1$s: %2$s"
 msgstr "%1$s: %2$s"
+
+#. translators: %s: output format, for example AVIF.
+#: includes/Admin/UploadWarning.php:83
+#, php-format
+msgid "Not converted to %s."
+msgstr "Tidak dikonversi ke %s."
+
+#. translators: 1: file name, 2: output format, for example AVIF.
+#: includes/Admin/UploadWarning.php:85
+#, php-format
+msgid "\"%1$s\" was not converted to %2$s."
+msgstr "\"%1$s\" tidak dikonversi ke %2$s."
+
+#. translators: 1: output format, for example AVIF, 2: reason it was not
+#. converted.
+#: includes/Admin/UploadWarning.php:91
+#, php-format
+msgid "Not converted to %1$s: %2$s."
+msgstr "Tidak dikonversi ke %1$s: %2$s."
+
+#. translators: 1: file name, 2: output format, for example AVIF, 3: reason it
+#. was not converted.
+#: includes/Admin/UploadWarning.php:93
+#, php-format
+msgid "\"%1$s\" was not converted to %2$s: %3$s."
+msgstr "\"%1$s\" tidak dikonversi ke %2$s: %3$s."
+
+#: includes/Admin/UploadWarning.php:128
+msgid "Why the image was not converted, when it needed to be."
+msgstr "Alasan gambar tidak dikonversi, jika memang perlu dikonversi."
 
 #. translators: 1: required PHP version, 2: running PHP version.
 #: lunar-image-converter.php:71
