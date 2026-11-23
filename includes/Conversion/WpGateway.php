@@ -116,6 +116,12 @@ final class WpGateway implements Gateway {
 	 * @param string $name Wanted file name.
 	 */
 	public function unique_name( string $dir, string $name ): string {
+		// WordPress adds a number to a name that ends in a size (-150x150, -scaled, -rotated) even when nothing is in the way.
+		// A free name stays as it is, so a converted file keeps the name of the file it replaces.
+		if ( sanitize_file_name( $name ) === $name && ! file_exists( $dir . '/' . $name ) ) {
+			return $name;
+		}
+
 		return wp_unique_filename( $dir, $name );
 	}
 

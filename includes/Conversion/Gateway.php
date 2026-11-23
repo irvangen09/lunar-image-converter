@@ -51,7 +51,8 @@ interface Gateway {
 	public function record( int $attachment_id, string $status, string $reason, int $saved_bytes ): void;
 
 	/**
-	 * Returns a file name that does not exist yet in a directory.
+	 * Returns a file name that does not exist yet in a directory: the wanted name when it is free, and the wanted
+	 * name with a number added to it when it is not.
 	 *
 	 * @param string $dir  Absolute directory.
 	 * @param string $name Wanted file name.

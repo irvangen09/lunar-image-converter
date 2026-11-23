@@ -72,3 +72,39 @@ function sanitize_key( string $key ): string {
 function time(): int {
 	return 0 === AdminStub::$now ? \time() : AdminStub::$now;
 }
+
+/**
+ * Stands in for the file name cleaning of WordPress: anything but letters, digits, dots, dashes and underscores becomes a dash.
+ *
+ * @param string $name File name.
+ */
+function sanitize_file_name( string $name ): string {
+	return preg_replace( '/[^A-Za-z0-9._-]+/', '-', $name );
+}
+
+/**
+ * Stands in for wp_unique_filename(), with the rule that matters here: a name that ends in a size always gets a number.
+ *
+ * @param string $dir  Directory.
+ * @param string $name File name.
+ */
+function wp_unique_filename( string $dir, string $name ): string {
+	$name   = sanitize_file_name( $name );
+	$info   = pathinfo( $name );
+	$base   = $info['filename'];
+	$ext    = isset( $info['extension'] ) ? '.' . $info['extension'] : '';
+	$number = 0;
+
+	if ( 1 === preg_match( '/-(?:\\d+x\\d+|scaled|rotated)$/', $base ) ) {
+		$number = 1;
+	}
+
+	$candidate = 0 === $number ? $base . $ext : $base . '-' . $number . $ext;
+
+	while ( file_exists( $dir . '/' . $candidate ) ) {
+		++$number;
+		$candidate = $base . '-' . $number . $ext;
+	}
+
+	return $candidate;
+}
