@@ -247,6 +247,7 @@ final class WpGateway implements Gateway {
 		$now   = time();
 		$until = (string) ( $now + self::LOCK_SECONDS );
 
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- The lock is a row that only a unique insert can create; the options API cannot do that.
 		if ( 1 === (int) $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')", $name, $until ) ) ) {
 			return true;
 		}
@@ -258,7 +259,10 @@ final class WpGateway implements Gateway {
 		}
 
 		// Expired. The update names the value it saw, so when two requests find the same expired lock only one takes it.
-		return 1 === (int) $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", $until, $name, $held ) );
+		$taken = 1 === (int) $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", $until, $name, $held ) );
+		// phpcs:enable
+
+		return $taken;
 	}
 
 	/**
@@ -269,7 +273,7 @@ final class WpGateway implements Gateway {
 	public function unlock( int $attachment_id ): void {
 		global $wpdb;
 
-		$wpdb->delete( $wpdb->options, array( 'option_name' => self::LOCK_PREFIX . $attachment_id ) );
+		$wpdb->delete( $wpdb->options, array( 'option_name' => self::LOCK_PREFIX . $attachment_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Removes the plugin's own lock row.
 	}
 
 	/**
@@ -534,7 +538,7 @@ final class WpGateway implements Gateway {
 			}
 		}
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Counting by two meta values needs a custom query.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Counting by two meta values needs a custom query.
 		$counts['kept'] = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$wpdb->posts} p
