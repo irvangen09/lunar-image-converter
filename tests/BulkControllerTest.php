@@ -86,6 +86,7 @@ final class BulkControllerTest extends TestCase {
 				'id'     => 3,
 				'next'   => 3,
 				'name'   => 'photo.jpg',
+				'busy'   => false,
 				'status' => 'converted',
 				'reason' => '',
 				'saved'  => $this->gateway->records[3]['saved'],
@@ -251,6 +252,83 @@ final class BulkControllerTest extends TestCase {
 		$this->assertSame( 'failed', $result['status'] );
 		$this->assertSame( 'error', $result['reason'] );
 		$this->assertFileExists( $this->dir . '/photo.jpg' );
+	}
+
+	public function test_an_image_that_another_request_is_converting_is_left_alone(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$this->gateway->locked_elsewhere = array( 3 );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertTrue( $result['busy'] );
+		$this->assertSame( 3, $result['next'], 'The cursor moves on.' );
+		$this->assertSame( array(), $this->gateway->records );
+		$this->assertSame( array(), $this->gateway->replacements );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+		$this->assertNotContains( 'unlock:3', $this->gateway->events, 'A lock held by someone else is not ours to release.' );
+	}
+
+	public function test_the_lock_is_released_after_a_conversion(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertFalse( $result['busy'] );
+		$this->assertSame( array(), $this->gateway->held );
+		$this->assertSame( 'lock:3', $this->gateway->events[0] );
+		$this->assertSame( 'unlock:3', $this->gateway->events[ count( $this->gateway->events ) - 1 ] );
+	}
+
+	public function test_the_lock_is_released_when_the_conversion_throws(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$this->gateway->throwing_metadata = array( 3 );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertSame( 'failed', $result['status'] );
+		$this->assertSame( array(), $this->gateway->held );
+	}
+
+	public function test_the_lock_is_released_even_when_the_failure_cannot_be_recorded(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$this->gateway->throwing_metadata = array( 3 );
+		$this->gateway->throwing_record   = true;
+
+		try {
+			$this->controller()->process_next( 'new', 0 );
+		} catch ( \RuntimeException ) {
+			$this->assertSame( array(), $this->gateway->held );
+
+			return;
+		}
+
+		$this->fail( 'The error from recording was expected.' );
+	}
+
+	public function test_a_lock_that_cannot_be_taken_because_of_an_error_only_skips_the_image(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$this->gateway->throwing = array( 'lock' );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertTrue( $result['busy'] );
+		$this->assertSame( array(), $this->gateway->records );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+	}
+
+	public function test_a_lock_that_cannot_be_released_does_not_hide_the_result(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$this->gateway->throwing = array( 'unlock' );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertSame( 'converted', $result['status'] );
+		$this->assertFalse( $result['busy'] );
 	}
 
 	public function test_fills_empty_alt_text_from_the_file_name_when_the_setting_is_on(): void {

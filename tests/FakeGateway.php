@@ -121,7 +121,7 @@ final class FakeGateway implements Gateway {
 	public array $image_sizes = array();
 
 	/**
-	 * Names of the operations that throw: switch_to, save_metadata, replace_urls, delete or record_converted.
+	 * Names of the operations that throw: lock, unlock, switch_to, save_metadata, replace_urls or delete.
 	 *
 	 * @var string[]
 	 */
@@ -131,6 +131,20 @@ final class FakeGateway implements Gateway {
 	 * Whether the request counts as a browser upload.
 	 */
 	public bool $upload_request = true;
+
+	/**
+	 * Attachment IDs that another request holds the lock of.
+	 *
+	 * @var int[]
+	 */
+	public array $locked_elsewhere = array();
+
+	/**
+	 * Attachment IDs this gateway holds the lock of right now.
+	 *
+	 * @var int[]
+	 */
+	public array $held = array();
 
 	public bool $switch_succeeds = true;
 
@@ -252,6 +266,31 @@ final class FakeGateway implements Gateway {
 
 	public function is_upload_request(): bool {
 		return $this->upload_request;
+	}
+
+	public function lock( int $attachment_id ): bool {
+		$this->events[] = 'lock:' . $attachment_id;
+
+		if ( in_array( 'lock', $this->throwing, true ) ) {
+			throw new \RuntimeException( 'lock failed' );
+		}
+
+		if ( in_array( $attachment_id, $this->locked_elsewhere, true ) || in_array( $attachment_id, $this->held, true ) ) {
+			return false;
+		}
+
+		$this->held[] = $attachment_id;
+
+		return true;
+	}
+
+	public function unlock( int $attachment_id ): void {
+		$this->events[] = 'unlock:' . $attachment_id;
+		$this->held     = array_values( array_diff( $this->held, array( $attachment_id ) ) );
+
+		if ( in_array( 'unlock', $this->throwing, true ) ) {
+			throw new \RuntimeException( 'unlock failed' );
+		}
 	}
 
 	public function switch_to( int $attachment_id, string $path, string $mime ): bool {

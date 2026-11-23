@@ -102,6 +102,23 @@ interface Gateway {
 	public function is_upload_request(): bool;
 
 	/**
+	 * Takes the lock of an attachment, so that only one request converts it at a time.
+	 *
+	 * Returns false when another request holds the lock. A lock that was not released, because its request died,
+	 * expires after a few minutes.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function lock( int $attachment_id ): bool;
+
+	/**
+	 * Releases the lock of an attachment.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function unlock( int $attachment_id ): void;
+
+	/**
 	 * Points an attachment at a new main file and MIME type.
 	 *
 	 * @param int    $attachment_id Attachment ID.

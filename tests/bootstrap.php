@@ -22,6 +22,7 @@ require_once dirname( __DIR__ ) . '/includes/Core/Autoloader.php';
 require_once __DIR__ . '/FakeGateway.php';
 require_once __DIR__ . '/FakeContentStore.php';
 require_once __DIR__ . '/WpStub.php';
+require_once __DIR__ . '/WpdbStub.php';
 require_once __DIR__ . '/OptionStub.php';
 require_once __DIR__ . '/option-functions.php';
 require_once __DIR__ . '/AdminStub.php';

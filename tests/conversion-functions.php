@@ -68,3 +68,7 @@ function wp_unslash( $value ) {
 function sanitize_key( string $key ): string {
 	return preg_replace( '/[^a-z0-9_\\-]/', '', strtolower( $key ) );
 }
+
+function time(): int {
+	return 0 === AdminStub::$now ? \time() : AdminStub::$now;
+}

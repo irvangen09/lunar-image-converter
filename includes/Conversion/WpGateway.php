@@ -29,6 +29,19 @@ final class WpGateway implements Gateway {
 	public const META_KEYS = array( self::META_STATUS, self::META_REASON, self::META_SAVED );
 
 	/**
+	 * Start of the name of the option row that is the lock of an attachment; the ID follows.
+	 *
+	 * The rows are internal and not part of the stable contract. They exist only while an image is converted,
+	 * and uninstall.php removes any that are left.
+	 */
+	public const LOCK_PREFIX = 'lunar_image_converter_lock_';
+
+	/**
+	 * Seconds after which a lock that was never released counts as expired.
+	 */
+	public const LOCK_SECONDS = 300;
+
+	/**
 	 * Post meta key where the image editor keeps the files that let an edit be undone.
 	 */
 	private const META_BACKUP_SIZES = '_wp_attachment_backup_sizes';
@@ -215,6 +228,46 @@ final class WpGateway implements Gateway {
 		return wp_doing_ajax()
 			&& isset( $_REQUEST['action'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only reads which request this is; WordPress checks the nonce of the upload itself.
 			&& 'upload-attachment' === sanitize_key( wp_unslash( $_REQUEST['action'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Same.
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * The lock is a row in the options table with a unique name: the insert succeeds for one request only,
+	 * which a read followed by a write could not guarantee.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function lock( int $attachment_id ): bool {
+		global $wpdb;
+
+		$name  = self::LOCK_PREFIX . $attachment_id;
+		$now   = time();
+		$until = (string) ( $now + self::LOCK_SECONDS );
+
+		if ( 1 === (int) $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')", $name, $until ) ) ) {
+			return true;
+		}
+
+		$held = $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $name ) );
+
+		if ( null === $held || (int) $held > $now ) {
+			return false;
+		}
+
+		// Expired. The update names the value it saw, so when two requests find the same expired lock only one takes it.
+		return 1 === (int) $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", $until, $name, $held ) );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function unlock( int $attachment_id ): void {
+		global $wpdb;
+
+		$wpdb->delete( $wpdb->options, array( 'option_name' => self::LOCK_PREFIX . $attachment_id ) );
 	}
 
 	/**

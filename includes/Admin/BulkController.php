@@ -149,10 +149,11 @@ final class BulkController {
 		$name       = basename( $this->gateway->relative_path( $id ) );
 		$alt_filled = $this->fill_alt_text( $id, $name );
 
-		try {
-			$this->pipeline->convert( $id, $this->gateway->metadata( $id ), $settings, true );
-		} catch ( \Throwable ) {
-			$this->gateway->record( $id, Pipeline::STATUS_FAILED, Pipeline::REASON_ERROR, 0 );
+		// Another tab or request may be converting this image; it is left to them.
+		$busy = ! $this->take_lock( $id );
+
+		if ( ! $busy ) {
+			$this->convert_locked( $id, $settings );
 		}
 
 		return array(
@@ -160,11 +161,46 @@ final class BulkController {
 			'id'     => $id,
 			'next'   => $id,
 			'name'   => $name,
+			'busy'   => $busy,
 			'status' => $this->gateway->status( $id ),
 			'reason' => $this->gateway->reason( $id ),
 			'saved'  => $this->gateway->saved( $id ),
 			'alt'    => $alt_filled,
 		);
+	}
+
+	/**
+	 * Takes the lock of an image; an error counts as a lock held by someone else, which only skips the image.
+	 *
+	 * @param int $id Attachment ID.
+	 */
+	private function take_lock( int $id ): bool {
+		try {
+			return $this->gateway->lock( $id );
+		} catch ( \Throwable ) {
+			return false;
+		}
+	}
+
+	/**
+	 * Converts an image whose lock is held, and always lets the lock go.
+	 *
+	 * @param int                  $id       Attachment ID.
+	 * @param array<string, mixed> $settings Plugin settings.
+	 */
+	private function convert_locked( int $id, array $settings ): void {
+		try {
+			$this->pipeline->convert( $id, $this->gateway->metadata( $id ), $settings, true );
+		} catch ( \Throwable ) {
+			$this->gateway->record( $id, Pipeline::STATUS_FAILED, Pipeline::REASON_ERROR, 0 );
+		} finally {
+			try {
+				$this->gateway->unlock( $id );
+			} catch ( \Throwable ) {
+				// The lock expires by itself.
+				return;
+			}
+		}
 	}
 
 	/**
