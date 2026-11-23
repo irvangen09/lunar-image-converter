@@ -838,6 +838,153 @@ final class PipelineTest extends TestCase {
 	}
 
 	/**
+	 * Creates a directory next to the uploads directory, with one JPEG in it.
+	 *
+	 * @return string Absolute path of the directory.
+	 */
+	private function outside_directory(): string {
+		$outside = $this->base . '-outside';
+
+		mkdir( $outside );
+		file_put_contents( $outside . '/photo.jpg', self::image_bytes( 'image/jpeg', 1000 ) );
+
+		return $outside;
+	}
+
+	private function remove_directory( string $path ): void {
+		foreach ( (array) glob( $path . '/*' ) as $file ) {
+			unlink( $file );
+		}
+
+		rmdir( $path );
+	}
+
+	public function test_a_file_outside_the_uploads_directory_is_never_converted_or_deleted(): void {
+		$outside = $this->outside_directory();
+
+		$this->gateway->posts[9] = array(
+			'mime' => 'image/jpeg',
+			'path' => '../' . basename( $outside ) . '/photo.jpg',
+		);
+
+		$metadata = array(
+			'width'  => 1000,
+			'height' => 800,
+			'file'   => '../' . basename( $outside ) . '/photo.jpg',
+		);
+
+		$result = $this->pipeline()->convert( 9, $metadata, Settings::DEFAULTS, true );
+
+		$this->assertSame( $metadata, $result );
+		$this->assertSame( 'failed', $this->gateway->records[9]['status'] );
+		$this->assertSame( 'missing_file', $this->gateway->records[9]['reason'] );
+		$this->assertSame( 0, $this->encoded );
+		$this->assertSame( array(), $this->gateway->events );
+		$this->assertFileExists( $outside . '/photo.jpg' );
+
+		$this->remove_directory( $outside );
+	}
+
+	public function test_a_size_that_is_a_link_to_a_file_outside_the_uploads_directory_is_refused(): void {
+		$outside  = $this->outside_directory();
+		$metadata = $this->attach( 7 );
+
+		unlink( $this->dir . '/photo-150x150.jpg' );
+
+		if ( ! @symlink( $outside . '/photo.jpg', $this->dir . '/photo-150x150.jpg' ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Some systems do not allow links.
+			$this->remove_directory( $outside );
+			$this->markTestSkipped( 'This system does not allow links.' );
+		}
+
+		$result = $this->pipeline()->convert( 7, $metadata, Settings::DEFAULTS );
+
+		$this->assertSame( $metadata, $result );
+		$this->assertSame( 'missing_file', $this->gateway->records[7]['reason'] );
+		$this->assertSame( 0, $this->encoded );
+		$this->assertFileExists( $outside . '/photo.jpg' );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+
+		$this->remove_directory( $outside );
+	}
+
+	public function test_a_converted_file_with_other_dimensions_is_thrown_away(): void {
+		$this->gateway->image_sizes['photo-150x150.webp'] = array( 99, 99 );
+		$metadata = $this->attach( 7 );
+
+		$result = $this->pipeline()->convert( 7, $metadata, Settings::DEFAULTS );
+
+		$this->assertSame( $metadata, $result );
+		$this->assertSame( 'failed', $this->gateway->records[7]['status'] );
+		$this->assertSame( 'encode_failed', $this->gateway->records[7]['reason'] );
+		$this->assertOnlyOriginalsRemain();
+		$this->assertSame( array(), $this->gateway->saved_metadata );
+	}
+
+	public function test_images_whose_size_cannot_be_read_are_not_trusted(): void {
+		foreach ( array( 'photo.jpg', 'photo.webp', 'photo-150x150.jpg', 'photo-150x150.webp' ) as $name ) {
+			$this->gateway->image_sizes[ $name ] = array();
+		}
+
+		$metadata = $this->attach( 7 );
+
+		$result = $this->pipeline()->convert( 7, $metadata, Settings::DEFAULTS );
+
+		$this->assertSame( $metadata, $result );
+		$this->assertSame( 'encode_failed', $this->gateway->records[7]['reason'] );
+		$this->assertOnlyOriginalsRemain();
+	}
+
+	public function test_an_error_while_switching_leaves_the_attachment_on_its_old_file(): void {
+		$this->gateway->throwing = array( 'switch_to' );
+		$metadata                = $this->attach( 7 );
+
+		$result = $this->pipeline()->convert( 7, $metadata, Settings::DEFAULTS );
+
+		$this->assertSame( $metadata, $result );
+		$this->assertSame( 'failed', $this->gateway->records[7]['status'] );
+		$this->assertSame( 'error', $this->gateway->records[7]['reason'] );
+		$this->assertOnlyOriginalsRemain();
+		$this->assertSame( $metadata, $this->gateway->saved_metadata[7] );
+		$this->assertSame( 'image/jpeg', $this->gateway->posts[7]['mime'] );
+	}
+
+	public function test_an_error_while_saving_the_metadata_switches_back_to_the_old_file(): void {
+		$this->gateway->throwing = array( 'save_metadata' );
+		$metadata                = $this->attach( 7 );
+
+		$result = $this->pipeline()->convert( 7, $metadata, Settings::DEFAULTS );
+
+		$this->assertSame( $metadata, $result );
+		$this->assertSame( 'error', $this->gateway->records[7]['reason'] );
+		$this->assertSame( 'image/jpeg', $this->gateway->posts[7]['mime'] );
+		$this->assertSame( '2026/11/photo.jpg', $this->gateway->posts[7]['path'] );
+		$this->assertOnlyOriginalsRemain();
+	}
+
+	public function test_an_error_while_replacing_urls_keeps_the_conversion_and_the_old_files(): void {
+		$this->gateway->throwing = array( 'replace_urls' );
+
+		$result = $this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$this->assertSame( '2026/11/photo.webp', $result['file'] );
+		$this->assertSame( 'converted', $this->gateway->records[7]['status'] );
+		$this->assertSame( 'old_files_kept', $this->gateway->records[7]['reason'] );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+		$this->assertFileExists( $this->dir . '/photo.webp' );
+	}
+
+	public function test_an_error_while_deleting_the_old_files_keeps_the_conversion(): void {
+		$this->gateway->throwing = array( 'delete' );
+
+		$result = $this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS );
+
+		$this->assertSame( '2026/11/photo.webp', $result['file'] );
+		$this->assertSame( 'converted', $this->gateway->records[7]['status'] );
+		$this->assertSame( 'old_files_kept', $this->gateway->records[7]['reason'] );
+		$this->assertFileExists( $this->dir . '/photo.webp' );
+	}
+
+	/**
 	 * Asserts that only the given attachment's JPEG or PNG files are left in the month directory.
 	 */
 	private function assertOnlyOriginalsRemain(): void {

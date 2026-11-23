@@ -162,7 +162,7 @@ final class Pipeline {
 		$sources      = $this->source_files( $main, $metadata );
 
 		foreach ( $sources as $name ) {
-			if ( ! is_file( $dir . '/' . $name ) ) {
+			if ( ! $this->is_upload( $dir . '/' . $name ) ) {
 				return $this->decline( $attachment_id, self::STATUS_FAILED, self::REASON_MISSING_FILE );
 			}
 		}
@@ -229,7 +229,8 @@ final class Pipeline {
 				$created[] = $path;
 
 				if ( ! $this->converter->encode( $dir . '/' . $name, $path, $plan['target'], $quality )
-					|| $plan['target'] !== $this->gateway->mime_of_file( $path ) ) {
+					|| $plan['target'] !== $this->gateway->mime_of_file( $path )
+					|| ! $this->same_size( $dir . '/' . $name, $path ) ) {
 					return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_ENCODE_FAILED, $created );
 				}
 
@@ -268,17 +269,61 @@ final class Pipeline {
 		$new_metadata = $this->new_metadata( $metadata, $written['names'], $plan['main'], $plan['dir_relative'], $dir, $plan['target'] );
 		$old_path     = $dir . '/' . $plan['main'];
 
-		if ( ! $this->gateway->switch_to( $attachment_id, $dir . '/' . $written['names'][ $plan['main'] ], $plan['target'] ) ) {
-			return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_UPDATE_FAILED, $written['created'] );
-		}
+		try {
+			if ( ! $this->gateway->switch_to( $attachment_id, $dir . '/' . $written['names'][ $plan['main'] ], $plan['target'] ) ) {
+				return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_UPDATE_FAILED, $written['created'] );
+			}
 
-		if ( ! $this->gateway->save_metadata( $attachment_id, $new_metadata ) ) {
-			$this->gateway->switch_to( $attachment_id, $old_path, $plan['source_mime'] );
+			if ( ! $this->gateway->save_metadata( $attachment_id, $new_metadata ) ) {
+				$this->gateway->switch_to( $attachment_id, $old_path, $plan['source_mime'] );
 
-			return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_UPDATE_FAILED, $written['created'] );
+				return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_UPDATE_FAILED, $written['created'] );
+			}
+		} catch ( \Throwable ) {
+			return $this->undo_switch( $attachment_id, $metadata, $plan, $written['created'] );
 		}
 
 		return $new_metadata;
+	}
+
+	/**
+	 * Puts the attachment back on its old file after an unexpected error and removes the new files.
+	 *
+	 * Each step is tried on its own: an error while undoing must not stop the steps that follow.
+	 *
+	 * @param int                  $attachment_id Attachment ID.
+	 * @param array<string, mixed> $metadata      Old attachment metadata.
+	 * @param array<string, mixed> $plan          Result of plan().
+	 * @param string[]             $created       Absolute paths of the new files.
+	 * @return null
+	 */
+	private function undo_switch( int $attachment_id, array $metadata, array $plan, array $created ) {
+		$this->attempt(
+			function () use ( $attachment_id, $plan ): void {
+				$this->gateway->switch_to( $attachment_id, $plan['dir'] . '/' . $plan['main'], $plan['source_mime'] );
+			}
+		);
+
+		$this->attempt(
+			function () use ( $attachment_id, $metadata ): void {
+				$this->gateway->save_metadata( $attachment_id, $metadata );
+			}
+		);
+
+		return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_ERROR, $created );
+	}
+
+	/**
+	 * Runs one step and ignores any error it throws.
+	 *
+	 * @param \Closure $step Step to run.
+	 */
+	private function attempt( \Closure $step ): void {
+		try {
+			$step();
+		} catch ( \Throwable ) {
+			return;
+		}
 	}
 
 	/**
@@ -295,6 +340,31 @@ final class Pipeline {
 	 * @return array<string, mixed>
 	 */
 	private function finish( int $attachment_id, array $new_metadata, array $plan, array $written, bool $in_use ): array {
+		try {
+			return $this->replace_and_delete( $attachment_id, $new_metadata, $plan, $written, $in_use );
+		} catch ( \Throwable ) {
+			// The attachment already points at the new files; an error from here on must not undo that.
+			$this->attempt(
+				function () use ( $attachment_id ): void {
+					$this->gateway->record( $attachment_id, self::STATUS_CONVERTED, self::REASON_OLD_FILES_KEPT, 0 );
+				}
+			);
+
+			return $new_metadata;
+		}
+	}
+
+	/**
+	 * Replaces the URLs, deletes the old files and records the result.
+	 *
+	 * @param int                  $attachment_id Attachment ID.
+	 * @param array<string, mixed> $new_metadata  Metadata of the converted attachment.
+	 * @param array<string, mixed> $plan          Result of plan().
+	 * @param array<string, mixed> $written       Result of write_files().
+	 * @param bool                 $in_use        Whether the image may already be used in content.
+	 * @return array<string, mixed>
+	 */
+	private function replace_and_delete( int $attachment_id, array $new_metadata, array $plan, array $written, bool $in_use ): array {
 		$path_map = $this->path_map( $plan['dir_relative'], $written['names'], $plan['main'], $plan['extras'] );
 
 		if ( $in_use ) {
@@ -346,6 +416,27 @@ final class Pipeline {
 	}
 
 	/**
+	 * Tells whether a path is an existing file inside the uploads directory.
+	 *
+	 * @param string $path Absolute path.
+	 */
+	private function is_upload( string $path ): bool {
+		return is_file( $path ) && UploadsPath::contains( $this->gateway->base_dir(), $path );
+	}
+
+	/**
+	 * Tells whether a converted file has the same width and height as the file it was made from.
+	 *
+	 * @param string $source    Absolute path of the old file.
+	 * @param string $converted Absolute path of the new file.
+	 */
+	private function same_size( string $source, string $converted ): bool {
+		$expected = $this->gateway->image_size( $source );
+
+		return array() !== $expected && $expected === $this->gateway->image_size( $converted );
+	}
+
+	/**
 	 * Lists the other files of an attachment that are removed with it: the file from before WordPress scaled
 	 * the image, and the files the image editor keeps to undo an edit. Only files that exist are listed.
 	 *
@@ -365,7 +456,7 @@ final class Pipeline {
 		$extras = array();
 
 		foreach ( array_unique( $names ) as $name ) {
-			if ( ! in_array( $name, $sources, true ) && is_file( $dir . '/' . $name ) ) {
+			if ( ! in_array( $name, $sources, true ) && $this->is_upload( $dir . '/' . $name ) ) {
 				$extras[] = $name;
 			}
 		}

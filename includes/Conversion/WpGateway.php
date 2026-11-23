@@ -8,6 +8,7 @@
 namespace LunarImageConverter\Conversion;
 
 use LunarImageConverter\Content\UrlReplacer;
+use LunarImageConverter\Content\WpContentStore;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -126,6 +127,18 @@ final class WpGateway implements Gateway {
 	/**
 	 * {@inheritDoc}
 	 *
+	 * @param string $path Absolute path.
+	 * @return int[]
+	 */
+	public function image_size( string $path ): array {
+		$size = wp_getimagesize( $path );
+
+		return is_array( $size ) ? array( (int) $size[0], (int) $size[1] ) : array();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
 	 * @param string $format  Output format key.
 	 * @param float  $built_in Built-in limit.
 	 */
@@ -204,6 +217,11 @@ final class WpGateway implements Gateway {
 	 * @param string $path Absolute path.
 	 */
 	public function delete( string $path ): void {
+		// Paths come from the database; nothing outside the uploads directory is ever removed.
+		if ( ! UploadsPath::contains( $this->base_dir(), $path ) ) {
+			return;
+		}
+
 		wp_delete_file( $path );
 	}
 
@@ -279,7 +297,7 @@ final class WpGateway implements Gateway {
 		$uploads = wp_get_upload_dir();
 
 		try {
-			return ( new UrlReplacer() )->replace( $path_map, (string) $uploads['baseurl'] );
+			return ( new UrlReplacer( new WpContentStore() ) )->replace( $path_map, (string) $uploads['baseurl'] );
 		} catch ( \Throwable ) {
 			return false;
 		}

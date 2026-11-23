@@ -73,6 +73,14 @@ interface Gateway {
 	public function mime_of_file( string $path ): string;
 
 	/**
+	 * Returns the width and height found by reading a file, or an empty array when it is not a readable image.
+	 *
+	 * @param string $path Absolute path.
+	 * @return int[]
+	 */
+	public function image_size( string $path ): array;
+
+	/**
 	 * Returns the largest image, in megapixels, that may be converted.
 	 *
 	 * @param string $format  Output format key.
@@ -152,7 +160,7 @@ interface Gateway {
 	 * Replaces the URLs of old files by the URLs of their converted files in the post content.
 	 *
 	 * @param array<string, string> $path_map Old path => new path, both relative to the uploads directory.
-	 * @return bool Whether every place that needed it was updated.
+	 * @return bool Whether every place that needed it was updated and no other content still refers to the old files.
 	 */
 	public function replace_urls( array $path_map ): bool;
 

@@ -113,6 +113,20 @@ final class FakeGateway implements Gateway {
 
 	public bool $replace_succeeds = true;
 
+	/**
+	 * Width and height by file name; any other file is 10 x 10.
+	 *
+	 * @var array<string, int[]>
+	 */
+	public array $image_sizes = array();
+
+	/**
+	 * Names of the operations that throw: switch_to, save_metadata, replace_urls, delete or record_converted.
+	 *
+	 * @var string[]
+	 */
+	public array $throwing = array();
+
 	public bool $switch_succeeds = true;
 
 	public bool $save_succeeds = true;
@@ -219,6 +233,10 @@ final class FakeGateway implements Gateway {
 		return '';
 	}
 
+	public function image_size( string $path ): array {
+		return is_file( $path ) ? ( $this->image_sizes[ basename( $path ) ] ?? array( 10, 10 ) ) : array();
+	}
+
 	public function max_megapixels( string $format, float $built_in ): float {
 		return $this->megapixel_limit ?? $built_in;
 	}
@@ -229,6 +247,10 @@ final class FakeGateway implements Gateway {
 
 	public function switch_to( int $attachment_id, string $path, string $mime ): bool {
 		$this->events[] = 'switch:' . basename( $path ) . ':' . $mime;
+
+		if ( in_array( 'switch_to', $this->throwing, true ) ) {
+			throw new \RuntimeException( 'switch_to failed' );
+		}
 
 		if ( ! $this->switch_succeeds ) {
 			return false;
@@ -243,6 +265,10 @@ final class FakeGateway implements Gateway {
 	public function save_metadata( int $attachment_id, array $metadata ): bool {
 		$this->events[] = 'save';
 
+		if ( in_array( 'save_metadata', $this->throwing, true ) ) {
+			throw new \RuntimeException( 'save_metadata failed' );
+		}
+
 		if ( ! $this->save_succeeds ) {
 			return false;
 		}
@@ -254,6 +280,10 @@ final class FakeGateway implements Gateway {
 
 	public function delete( string $path ): void {
 		$this->events[] = 'delete:' . basename( $path );
+
+		if ( in_array( 'delete', $this->throwing, true ) && str_ends_with( $path, '.jpg' ) ) {
+			throw new \RuntimeException( 'delete failed' );
+		}
 
 		if ( is_file( $path ) ) {
 			unlink( $path );
@@ -289,6 +319,10 @@ final class FakeGateway implements Gateway {
 	public function replace_urls( array $path_map ): bool {
 		$this->events[]       = 'replace';
 		$this->replacements[] = $path_map;
+
+		if ( in_array( 'replace_urls', $this->throwing, true ) ) {
+			throw new \RuntimeException( 'replace_urls failed' );
+		}
 
 		return $this->replace_succeeds;
 	}
