@@ -61,6 +61,11 @@ final class BulkScriptTest extends TestCase {
 		);
 	}
 
+	public function test_the_script_counts_kept_images_under_the_key_the_gateway_uses(): void {
+		$this->assertStringContainsString( "const KEPT = 'kept';", $this->script );
+		$this->assertArrayHasKey( 'kept', ( new FakeGateway( sys_get_temp_dir() ) )->count_attachments( array() ) );
+	}
+
 	public function test_every_status_constant_of_the_pipeline_is_known_to_the_script(): void {
 		$statuses = array();
 

@@ -102,8 +102,8 @@ msgid "Convert images"
 msgstr "Konversi gambar"
 
 #: includes/Admin/BulkPanel.php:84
-msgid "Try again: skipped and failed images"
-msgstr "Coba lagi: gambar yang dilewati dan yang gagal"
+msgid "Try again: skipped, failed and unfinished images"
+msgstr "Coba lagi: gambar yang dilewati, gagal, dan belum selesai"
 
 #: includes/Admin/BulkPanel.php:85
 msgid "Stop"
@@ -527,3 +527,24 @@ msgid ""
 msgstr ""
 "Lunar Image Converter memerlukan WordPress %1$s atau lebih baru. Situs ini "
 "menjalankan WordPress %2$s, sehingga plugin tidak aktif."
+
+msgid "Old files kept"
+msgstr "File lama dipertahankan"
+
+#. translators: %s: HTTP status code, for example 504.
+#, php-format
+msgid "The server did not finish the request (HTTP %1$s). This is often a time limit or a crash on the server. Images already converted stay converted; an image that was being converted is marked as interrupted. Use \"Try again\" to continue."
+msgstr "Server tidak menyelesaikan permintaan (HTTP %1$s). Penyebab yang sering adalah batas waktu atau server yang mogok. Gambar yang sudah dikonversi tetap terkonversi; gambar yang sedang dikonversi ditandai terputus. Gunakan \"Coba lagi\" untuk melanjutkan."
+
+#. translators: 1: what went wrong, 2: converted, 3: skipped, 4: failed.
+#, php-format
+msgid "%1$s Until then: converted %2$s, skipped %3$s, failed %4$s."
+msgstr "%1$s Sampai saat itu: dikonversi %2$s, dilewati %3$s, gagal %4$s."
+
+msgid "Stopping after the current image."
+msgstr "Berhenti setelah gambar ini selesai."
+
+#. translators: 1: attachment ID, 2: file name.
+#, php-format
+msgid "#%1$s %2$s: skipped, another request is working on it"
+msgstr "#%1$s %2$s: dilewati, permintaan lain sedang mengerjakannya"

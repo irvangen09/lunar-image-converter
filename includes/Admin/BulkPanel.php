@@ -58,7 +58,7 @@ final class BulkPanel {
 	public function render(): void {
 		$values = $this->settings->all();
 		?>
-		<h2><?php esc_html_e( 'Convert existing images', 'lunar-image-converter' ); ?></h2>
+		<h2 id="lic-bulk-heading"><?php esc_html_e( 'Convert existing images', 'lunar-image-converter' ); ?></h2>
 		<div class="lic-bulk" id="lic-bulk">
 			<?php if ( ! $this->environment->supports( (string) $values['output_format'] ) ) : ?>
 				<p class="lic-warning"><?php esc_html_e( 'The saved output format is not supported on this server. Choose another format and save the settings first.', 'lunar-image-converter' ); ?></p>
@@ -81,12 +81,13 @@ final class BulkPanel {
 				<p id="lic-bulk-counts" aria-live="polite"><?php esc_html_e( 'Counting images…', 'lunar-image-converter' ); ?></p>
 				<p class="lic-bulk__buttons">
 					<button type="button" class="button button-primary" id="lic-bulk-start" disabled><?php esc_html_e( 'Convert images', 'lunar-image-converter' ); ?></button>
-					<button type="button" class="button" id="lic-bulk-retry" disabled><?php esc_html_e( 'Try again: skipped and failed images', 'lunar-image-converter' ); ?></button>
+					<button type="button" class="button" id="lic-bulk-retry" disabled><?php esc_html_e( 'Try again: skipped, failed and unfinished images', 'lunar-image-converter' ); ?></button>
 					<button type="button" class="button" id="lic-bulk-stop" hidden><?php esc_html_e( 'Stop', 'lunar-image-converter' ); ?></button>
 				</p>
-				<progress id="lic-bulk-progress" class="lic-bulk__progress" value="0" max="1" hidden></progress>
-				<p id="lic-bulk-summary" aria-live="polite"></p>
-				<ul id="lic-bulk-log" class="lic-bulk__log"></ul>
+				<progress id="lic-bulk-progress" class="lic-bulk__progress" value="0" max="1" aria-labelledby="lic-bulk-summary" hidden></progress>
+				<p id="lic-bulk-summary" tabindex="-1"></p>
+				<p id="lic-bulk-status" class="screen-reader-text" role="status"></p>
+				<ul id="lic-bulk-log" class="lic-bulk__log" tabindex="0" aria-labelledby="lic-bulk-heading"></ul>
 				<noscript><p class="lic-warning"><?php esc_html_e( 'Converting existing images needs JavaScript.', 'lunar-image-converter' ); ?></p></noscript>
 			<?php endif; ?>
 		</div>
@@ -106,7 +107,10 @@ final class BulkPanel {
 				'count'   => BulkController::ACTION_COUNT,
 				'process' => BulkController::ACTION_PROCESS,
 			),
-			'labels'  => StatusText::statuses(),
+			'labels'  => array_merge(
+				StatusText::statuses(),
+				array( 'kept' => __( 'Old files kept', 'lunar-image-converter' ) )
+			),
 			'reasons' => StatusText::reasons(),
 			'text'    => array(
 				/* translators: 1: number of images done, 2: number of images in total. */
@@ -118,6 +122,13 @@ final class BulkPanel {
 				/* translators: %s: number of images that got alt text. */
 				'altAdded'      => __( 'Alt text added: %1$s.', 'lunar-image-converter' ),
 				'requestFailed' => __( 'The request failed. Check your connection and try again. Images already converted stay converted.', 'lunar-image-converter' ),
+				/* translators: %s: HTTP status code, for example 504. */
+				'serverError'   => __( 'The server did not finish the request (HTTP %1$s). This is often a time limit or a crash on the server. Images already converted stay converted; an image that was being converted is marked as interrupted. Use "Try again" to continue.', 'lunar-image-converter' ),
+				/* translators: 1: what went wrong, 2: converted, 3: skipped, 4: failed. */
+				'errorSummary'  => __( '%1$s Until then: converted %2$s, skipped %3$s, failed %4$s.', 'lunar-image-converter' ),
+				'stopping'      => __( 'Stopping after the current image.', 'lunar-image-converter' ),
+				/* translators: 1: attachment ID, 2: file name. */
+				'logBusy'       => __( '#%1$s %2$s: skipped, another request is working on it', 'lunar-image-converter' ),
 				/* translators: 1: attachment ID, 2: file name, 3: result, for example Converted. */
 				'logLine'       => __( '#%1$s %2$s: %3$s', 'lunar-image-converter' ),
 				/* translators: 1: attachment ID, 2: file name, 3: result, for example Skipped, 4: reason. */
