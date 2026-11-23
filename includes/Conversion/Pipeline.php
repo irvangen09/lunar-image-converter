@@ -93,28 +93,66 @@ final class Pipeline {
 	 * @return array<string, mixed>
 	 */
 	public function convert( int $attachment_id, array $metadata, array $settings, bool $in_use = false ): array {
+		$plan = $this->plan( $attachment_id, $metadata, $settings );
+
+		if ( null === $plan ) {
+			return $metadata;
+		}
+
+		if ( $in_use ) {
+			// If the request dies while encoding, this tells a later run that the image was started.
+			$this->gateway->record( $attachment_id, self::STATUS_PROCESSING, '', 0 );
+		}
+
+		$written = $this->write_files( $attachment_id, $metadata, $plan, (int) ( $settings['quality'] ?? 80 ) );
+
+		if ( null === $written ) {
+			return $metadata;
+		}
+
+		$new_metadata = $this->switch_over( $attachment_id, $metadata, $plan, $written );
+
+		if ( null === $new_metadata ) {
+			return $metadata;
+		}
+
+		return $this->finish( $attachment_id, $new_metadata, $plan, $written, $in_use );
+	}
+
+	/**
+	 * Decides whether the attachment is converted and works out what is converted.
+	 *
+	 * Returns null when nothing is to be done: the attachment is not eligible, or a status that says why not has
+	 * been recorded.
+	 *
+	 * @param int                  $attachment_id Attachment ID.
+	 * @param array<string, mixed> $metadata      Attachment metadata.
+	 * @param array<string, mixed> $settings      Plugin settings.
+	 * @return array{source_mime: string, format: string, target: string, dir_relative: string, dir: string, main: string, sources: string[], extras: string[]}|null
+	 */
+	private function plan( int $attachment_id, array $metadata, array $settings ): ?array {
 		$source_mime = $this->gateway->mime( $attachment_id );
 		$toggle      = self::SOURCE_TOGGLES[ $source_mime ] ?? '';
 
 		if ( '' === $toggle || empty( $settings[ $toggle ] ) ) {
-			return $metadata;
+			return null;
 		}
 
 		if ( self::STATUS_CONVERTED === $this->gateway->status( $attachment_id ) ) {
-			return $metadata;
+			return null;
 		}
 
 		$format = (string) ( $settings['output_format'] ?? '' );
 
 		if ( ! $this->environment->supports( $format ) ) {
-			return $this->stop( $attachment_id, self::STATUS_SKIPPED, self::REASON_FORMAT_UNSUPPORTED, array(), $metadata );
+			return $this->decline( $attachment_id, self::STATUS_SKIPPED, self::REASON_FORMAT_UNSUPPORTED );
 		}
 
 		$target   = Environment::FORMATS[ $format ]['mime'];
 		$relative = $this->gateway->relative_path( $attachment_id );
 
 		if ( '' === $relative ) {
-			return $this->stop( $attachment_id, self::STATUS_FAILED, self::REASON_MISSING_FILE, array(), $metadata );
+			return $this->decline( $attachment_id, self::STATUS_FAILED, self::REASON_MISSING_FILE );
 		}
 
 		$dir_relative = dirname( $relative );
@@ -124,85 +162,220 @@ final class Pipeline {
 		$sources      = $this->source_files( $main, $metadata );
 
 		foreach ( $sources as $name ) {
-			if ( ! is_file( $dir . '/' . $name ) ) {
-				return $this->stop( $attachment_id, self::STATUS_FAILED, self::REASON_MISSING_FILE, array(), $metadata );
+			if ( ! $this->is_upload( $dir . '/' . $name ) ) {
+				return $this->decline( $attachment_id, self::STATUS_FAILED, self::REASON_MISSING_FILE );
 			}
 		}
 
 		if ( empty( $metadata['width'] ) || empty( $metadata['height'] ) ) {
-			return $this->stop( $attachment_id, self::STATUS_FAILED, self::REASON_NO_METADATA, array(), $metadata );
+			return $this->decline( $attachment_id, self::STATUS_FAILED, self::REASON_NO_METADATA );
 		}
 
 		$megapixels = ( (int) ( $metadata['width'] ?? 0 ) * (int) ( $metadata['height'] ?? 0 ) ) / 1000000;
 		$limit      = $this->gateway->max_megapixels( $format, self::MAX_MEGAPIXELS[ $format ] ?? 8.0 );
 
 		if ( $megapixels > $limit ) {
-			return $this->stop( $attachment_id, self::STATUS_SKIPPED, self::REASON_TOO_LARGE, array(), $metadata );
+			return $this->decline( $attachment_id, self::STATUS_SKIPPED, self::REASON_TOO_LARGE );
 		}
 
 		if ( $target !== $this->gateway->allowed_mime( 'image.' . $format ) ) {
-			return $this->stop( $attachment_id, self::STATUS_SKIPPED, self::REASON_MIME_NOT_ALLOWED, array(), $metadata );
+			return $this->decline( $attachment_id, self::STATUS_SKIPPED, self::REASON_MIME_NOT_ALLOWED );
 		}
 
+		return array(
+			'source_mime'  => $source_mime,
+			'format'       => $format,
+			'target'       => $target,
+			'dir_relative' => $dir_relative,
+			'dir'          => $dir,
+			'main'         => $main,
+			'sources'      => $sources,
+			'extras'       => $this->extra_files( $attachment_id, $metadata, $sources, $dir ),
+		);
+	}
+
+	/**
+	 * Writes the converted copy of every file next to the old one and checks the result.
+	 *
+	 * Returns null, after removing what was written and recording why, when any file cannot be written, is not
+	 * what it should be, or when the main file did not get smaller.
+	 *
+	 * @param int                  $attachment_id Attachment ID.
+	 * @param array<string, mixed> $metadata      Attachment metadata.
+	 * @param array<string, mixed> $plan          Result of plan().
+	 * @param int                  $quality       Output quality.
+	 * @return array{names: array<string, string>, created: string[]}|null
+	 */
+	private function write_files( int $attachment_id, array $metadata, array $plan, int $quality ): ?array {
+		$dir     = $plan['dir'];
+		$main    = $plan['main'];
 		$created = array();
 		$names   = array();
-		$extras  = $this->extra_files( $attachment_id, $metadata, $sources, $dir );
-
-		if ( $in_use ) {
-			// If the request dies while encoding, this tells a later run that the image was started.
-			$this->gateway->record( $attachment_id, self::STATUS_PROCESSING, '', 0 );
-		}
 
 		try {
-			foreach ( $sources as $name ) {
+			foreach ( $plan['sources'] as $name ) {
 				if ( $this->gateway->seconds_left() < self::MIN_SECONDS_LEFT ) {
-					return $this->stop( $attachment_id, self::STATUS_SKIPPED, self::REASON_TIME_LIMIT, $created, $metadata );
+					return $this->abandon( $attachment_id, self::STATUS_SKIPPED, self::REASON_TIME_LIMIT, $created );
 				}
 
-				$new  = $this->gateway->unique_name( $dir, pathinfo( $name, PATHINFO_FILENAME ) . '.' . $format );
+				$new  = $this->gateway->unique_name( $dir, pathinfo( $name, PATHINFO_FILENAME ) . '.' . $plan['format'] );
 				$path = $dir . '/' . $new;
 
 				// Never write over a file that is already there.
 				if ( file_exists( $path ) ) {
-					return $this->stop( $attachment_id, self::STATUS_FAILED, self::REASON_ENCODE_FAILED, $created, $metadata );
+					return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_ENCODE_FAILED, $created );
 				}
 
 				$created[] = $path;
 
-				if ( ! $this->converter->encode( $dir . '/' . $name, $path, $target, (int) ( $settings['quality'] ?? 80 ) )
-					|| $target !== $this->gateway->mime_of_file( $path ) ) {
-					return $this->stop( $attachment_id, self::STATUS_FAILED, self::REASON_ENCODE_FAILED, $created, $metadata );
+				if ( ! $this->converter->encode( $dir . '/' . $name, $path, $plan['target'], $quality )
+					|| $plan['target'] !== $this->gateway->mime_of_file( $path )
+					|| ! $this->same_size( $dir . '/' . $name, $path ) ) {
+					return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_ENCODE_FAILED, $created );
 				}
 
 				$names[ $name ] = $new;
 			}
 		} catch ( \Throwable ) {
-			return $this->stop( $attachment_id, self::STATUS_FAILED, self::REASON_ERROR, $created, $metadata );
+			return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_ERROR, $created );
 		}
 
 		clearstatcache();
 
 		if ( (int) filesize( $dir . '/' . $names[ $main ] ) >= (int) filesize( $dir . '/' . $main ) ) {
-			return $this->stop( $attachment_id, self::STATUS_SKIPPED, self::REASON_NOT_SMALLER, $created, $metadata );
+			return $this->abandon( $attachment_id, self::STATUS_SKIPPED, self::REASON_NOT_SMALLER, $created );
 		}
 
-		$new_metadata = $this->new_metadata( $metadata, $names, $main, $dir_relative, $dir, $target );
-		$old_path     = $dir . '/' . $main;
+		return array(
+			'names'   => $names,
+			'created' => $created,
+		);
+	}
 
-		if ( ! $this->gateway->switch_to( $attachment_id, $dir . '/' . $names[ $main ], $target ) ) {
-			return $this->stop( $attachment_id, self::STATUS_FAILED, self::REASON_UPDATE_FAILED, $created, $metadata );
+	/**
+	 * Points the attachment and its metadata at the converted files.
+	 *
+	 * Returns the new metadata, or null, after undoing the switch and removing the new files, when it cannot be
+	 * saved.
+	 *
+	 * @param int                  $attachment_id Attachment ID.
+	 * @param array<string, mixed> $metadata      Old attachment metadata.
+	 * @param array<string, mixed> $plan          Result of plan().
+	 * @param array<string, mixed> $written       Result of write_files().
+	 * @return array<string, mixed>|null
+	 */
+	private function switch_over( int $attachment_id, array $metadata, array $plan, array $written ): ?array {
+		$dir          = $plan['dir'];
+		$new_metadata = $this->new_metadata( $metadata, $written['names'], $plan['main'], $plan['dir_relative'], $dir, $plan['target'] );
+		$old_path     = $dir . '/' . $plan['main'];
+
+		try {
+			if ( ! $this->gateway->switch_to( $attachment_id, $dir . '/' . $written['names'][ $plan['main'] ], $plan['target'] ) ) {
+				return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_UPDATE_FAILED, $written['created'] );
+			}
+
+			if ( ! $this->gateway->save_metadata( $attachment_id, $new_metadata ) ) {
+				$this->gateway->switch_to( $attachment_id, $old_path, $plan['source_mime'] );
+
+				return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_UPDATE_FAILED, $written['created'] );
+			}
+		} catch ( \Throwable ) {
+			return $this->undo_switch( $attachment_id, $metadata, $plan, $written['created'] );
 		}
 
-		if ( ! $this->gateway->save_metadata( $attachment_id, $new_metadata ) ) {
-			$this->gateway->switch_to( $attachment_id, $old_path, $source_mime );
+		return $new_metadata;
+	}
 
-			return $this->stop( $attachment_id, self::STATUS_FAILED, self::REASON_UPDATE_FAILED, $created, $metadata );
+	/**
+	 * Puts the attachment back on its old file after an unexpected error and removes the new files.
+	 *
+	 * Each step is tried on its own: an error while undoing must not stop the steps that follow.
+	 *
+	 * @param int                  $attachment_id Attachment ID.
+	 * @param array<string, mixed> $metadata      Old attachment metadata.
+	 * @param array<string, mixed> $plan          Result of plan().
+	 * @param string[]             $created       Absolute paths of the new files.
+	 * @return null
+	 */
+	private function undo_switch( int $attachment_id, array $metadata, array $plan, array $created ) {
+		$this->attempt(
+			function () use ( $attachment_id, $plan ): void {
+				$this->gateway->switch_to( $attachment_id, $plan['dir'] . '/' . $plan['main'], $plan['source_mime'] );
+			}
+		);
+
+		$this->attempt(
+			function () use ( $attachment_id, $metadata ): void {
+				$this->gateway->save_metadata( $attachment_id, $metadata );
+			}
+		);
+
+		return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_ERROR, $created );
+	}
+
+	/**
+	 * Runs one step and ignores any error it throws.
+	 *
+	 * @param \Closure $step Step to run.
+	 */
+	private function attempt( \Closure $step ): void {
+		try {
+			$step();
+		} catch ( \Throwable ) {
+			return;
 		}
+	}
 
-		$path_map = $this->path_map( $dir_relative, $names, $main, $extras );
+	/**
+	 * Replaces the URLs of an image that is in use, deletes the old files and records the result.
+	 *
+	 * When the URLs cannot be replaced the old files stay, and the image is recorded as converted with the old
+	 * files kept.
+	 *
+	 * @param int                  $attachment_id Attachment ID.
+	 * @param array<string, mixed> $new_metadata  Metadata of the converted attachment.
+	 * @param array<string, mixed> $plan          Result of plan().
+	 * @param array<string, mixed> $written       Result of write_files().
+	 * @param bool                 $in_use        Whether the image may already be used in content.
+	 * @return array<string, mixed>
+	 */
+	private function finish( int $attachment_id, array $new_metadata, array $plan, array $written, bool $in_use ): array {
+		try {
+			return $this->replace_and_delete( $attachment_id, $new_metadata, $plan, $written, $in_use );
+		} catch ( \Throwable ) {
+			// The attachment already points at the new files; an error from here on must not undo that.
+			$this->attempt(
+				function () use ( $attachment_id, $plan, $written ): void {
+					$this->gateway->keep_files( $attachment_id, $this->path_map( $plan['dir_relative'], $written['names'], $plan['main'], $plan['extras'] ) );
+				}
+			);
+			$this->attempt(
+				function () use ( $attachment_id ): void {
+					$this->gateway->record( $attachment_id, self::STATUS_CONVERTED, self::REASON_OLD_FILES_KEPT, 0 );
+				}
+			);
+
+			return $new_metadata;
+		}
+	}
+
+	/**
+	 * Replaces the URLs, deletes the old files and records the result.
+	 *
+	 * @param int                  $attachment_id Attachment ID.
+	 * @param array<string, mixed> $new_metadata  Metadata of the converted attachment.
+	 * @param array<string, mixed> $plan          Result of plan().
+	 * @param array<string, mixed> $written       Result of write_files().
+	 * @param bool                 $in_use        Whether the image may already be used in content.
+	 * @return array<string, mixed>
+	 */
+	private function replace_and_delete( int $attachment_id, array $new_metadata, array $plan, array $written, bool $in_use ): array {
+		$path_map = $this->path_map( $plan['dir_relative'], $written['names'], $plan['main'], $plan['extras'] );
 
 		if ( $in_use ) {
-			// Saved before the content is touched: if the request dies from here on, the old files stay.
+			// Saved before the content is touched: if the request dies from here on, the old files stay, and the
+			// map tells a later run what to clean up.
+			$this->gateway->keep_files( $attachment_id, $path_map );
 			$this->gateway->record( $attachment_id, self::STATUS_CONVERTED, self::REASON_OLD_FILES_KEPT, 0 );
 
 			if ( ! $this->gateway->replace_urls( $path_map ) ) {
@@ -210,14 +383,15 @@ final class Pipeline {
 			}
 		}
 
+		$dir       = $plan['dir'];
 		$old_files = array_map(
 			static function ( string $name ) use ( $dir ): string {
 				return $dir . '/' . $name;
 			},
-			array_merge( $sources, $extras )
+			array_merge( $plan['sources'], $plan['extras'] )
 		);
 
-		$saved = $this->total_size( $old_files ) - $this->total_size( $created );
+		$saved = $this->total_size( $old_files ) - $this->total_size( $written['created'] );
 
 		foreach ( $old_files as $path ) {
 			$this->gateway->delete( $path );
@@ -227,10 +401,89 @@ final class Pipeline {
 			$this->gateway->clear_backups( $attachment_id );
 		}
 
+		if ( $in_use ) {
+			$this->gateway->keep_files( $attachment_id, array() );
+		}
+
 		$this->gateway->record( $attachment_id, self::STATUS_CONVERTED, '', $saved );
 		$this->gateway->converted( $attachment_id, $path_map );
 
 		return $new_metadata;
+	}
+
+	/**
+	 * Finishes the cleanup of an image that was converted but whose old files were kept.
+	 *
+	 * Replaces the URLs again; only when that succeeds are the old files deleted and the image recorded as fully
+	 * converted. Otherwise nothing changes and a later run can try again. Does nothing for any other image.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function resume( int $attachment_id ): void {
+		if ( self::STATUS_CONVERTED !== $this->gateway->status( $attachment_id ) || self::REASON_OLD_FILES_KEPT !== $this->gateway->reason( $attachment_id ) ) {
+			return;
+		}
+
+		$path_map = $this->gateway->kept_files( $attachment_id );
+
+		if ( array() === $path_map || ! $this->gateway->replace_urls( $path_map ) ) {
+			return;
+		}
+
+		$base    = $this->gateway->base_dir();
+		$current = $this->current_files( $attachment_id );
+		$old     = array();
+		$new     = array();
+
+		foreach ( $path_map as $from => $to ) {
+			// Never delete a file the attachment uses now.
+			if ( in_array( $from, $current, true ) ) {
+				continue;
+			}
+
+			$old[] = $base . '/' . $from;
+			$new[] = $base . '/' . $to;
+		}
+
+		$saved = max( 0, $this->total_size( $old ) - $this->total_size( array_unique( $new ) ) );
+
+		foreach ( $old as $path ) {
+			$this->gateway->delete( $path );
+		}
+
+		if ( array() !== $this->gateway->backup_files( $attachment_id ) ) {
+			$this->gateway->clear_backups( $attachment_id );
+		}
+
+		$this->gateway->keep_files( $attachment_id, array() );
+		$this->gateway->record( $attachment_id, self::STATUS_CONVERTED, '', $saved );
+		$this->gateway->converted( $attachment_id, $path_map );
+	}
+
+	/**
+	 * Lists the files an attachment uses now, relative to the uploads directory.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return string[]
+	 */
+	private function current_files( int $attachment_id ): array {
+		$main     = $this->gateway->relative_path( $attachment_id );
+		$dir      = dirname( $main );
+		$prefix   = '.' === $dir ? '' : $dir . '/';
+		$metadata = $this->gateway->metadata( $attachment_id );
+		$files    = array( $main );
+
+		foreach ( (array) ( $metadata['sizes'] ?? array() ) as $size ) {
+			if ( is_array( $size ) && ! empty( $size['file'] ) ) {
+				$files[] = $prefix . $size['file'];
+			}
+		}
+
+		if ( ! empty( $metadata['original_image'] ) ) {
+			$files[] = $prefix . $metadata['original_image'];
+		}
+
+		return $files;
 	}
 
 	/**
@@ -246,6 +499,27 @@ final class Pipeline {
 		} catch ( \Throwable ) {
 			return;
 		}
+	}
+
+	/**
+	 * Tells whether a path is an existing file inside the uploads directory.
+	 *
+	 * @param string $path Absolute path.
+	 */
+	private function is_upload( string $path ): bool {
+		return is_file( $path ) && UploadsPath::contains( $this->gateway->base_dir(), $path );
+	}
+
+	/**
+	 * Tells whether a converted file has the same width and height as the file it was made from.
+	 *
+	 * @param string $source    Absolute path of the old file.
+	 * @param string $converted Absolute path of the new file.
+	 */
+	private function same_size( string $source, string $converted ): bool {
+		$expected = $this->gateway->image_size( $source );
+
+		return array() !== $expected && $expected === $this->gateway->image_size( $converted );
 	}
 
 	/**
@@ -268,7 +542,7 @@ final class Pipeline {
 		$extras = array();
 
 		foreach ( array_unique( $names ) as $name ) {
-			if ( ! in_array( $name, $sources, true ) && is_file( $dir . '/' . $name ) ) {
+			if ( ! in_array( $name, $sources, true ) && $this->is_upload( $dir . '/' . $name ) ) {
 				$extras[] = $name;
 			}
 		}
@@ -383,22 +657,33 @@ final class Pipeline {
 	}
 
 	/**
+	 * Ends a conversion before anything was written: records why and tells convert() to give the metadata back.
+	 *
+	 * @param int    $attachment_id Attachment ID.
+	 * @param string $status        Status to record.
+	 * @param string $reason        Reason code to record.
+	 * @return null
+	 */
+	private function decline( int $attachment_id, string $status, string $reason ) {
+		$this->gateway->record( $attachment_id, $status, $reason, 0 );
+
+		return null;
+	}
+
+	/**
 	 * Ends a conversion without changing the attachment: removes the files written so far and records why.
 	 *
-	 * @param int                  $attachment_id Attachment ID.
-	 * @param string               $status        Status to record.
-	 * @param string               $reason        Reason code to record.
-	 * @param string[]             $created       Absolute paths of the files written by this run.
-	 * @param array<string, mixed> $metadata      Metadata to hand back unchanged.
-	 * @return array<string, mixed>
+	 * @param int      $attachment_id Attachment ID.
+	 * @param string   $status        Status to record.
+	 * @param string   $reason        Reason code to record.
+	 * @param string[] $created       Absolute paths of the files written by this run.
+	 * @return null
 	 */
-	private function stop( int $attachment_id, string $status, string $reason, array $created, array $metadata ): array {
+	private function abandon( int $attachment_id, string $status, string $reason, array $created ) {
 		foreach ( $created as $path ) {
 			$this->gateway->delete( $path );
 		}
 
-		$this->gateway->record( $attachment_id, $status, $reason, 0 );
-
-		return $metadata;
+		return $this->decline( $attachment_id, $status, $reason );
 	}
 }

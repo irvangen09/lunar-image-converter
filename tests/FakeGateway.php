@@ -113,6 +113,46 @@ final class FakeGateway implements Gateway {
 
 	public bool $replace_succeeds = true;
 
+	/**
+	 * Maps of kept old files, by attachment ID.
+	 *
+	 * @var array<int, array<string, string>>
+	 */
+	public array $kept = array();
+
+	/**
+	 * Width and height by file name; any other file is 10 x 10.
+	 *
+	 * @var array<string, int[]>
+	 */
+	public array $image_sizes = array();
+
+	/**
+	 * Names of the operations that throw: lock, unlock, switch_to, save_metadata, replace_urls or delete.
+	 *
+	 * @var string[]
+	 */
+	public array $throwing = array();
+
+	/**
+	 * Whether the request counts as a browser upload.
+	 */
+	public bool $upload_request = true;
+
+	/**
+	 * Attachment IDs that another request holds the lock of.
+	 *
+	 * @var int[]
+	 */
+	public array $locked_elsewhere = array();
+
+	/**
+	 * Attachment IDs this gateway holds the lock of right now.
+	 *
+	 * @var int[]
+	 */
+	public array $held = array();
+
 	public bool $switch_succeeds = true;
 
 	public bool $save_succeeds = true;
@@ -219,6 +259,10 @@ final class FakeGateway implements Gateway {
 		return '';
 	}
 
+	public function image_size( string $path ): array {
+		return is_file( $path ) ? ( $this->image_sizes[ basename( $path ) ] ?? array( 10, 10 ) ) : array();
+	}
+
 	public function max_megapixels( string $format, float $built_in ): float {
 		return $this->megapixel_limit ?? $built_in;
 	}
@@ -227,8 +271,41 @@ final class FakeGateway implements Gateway {
 		return array() === $this->seconds_queue ? $this->seconds_left : array_shift( $this->seconds_queue );
 	}
 
+	public function is_upload_request(): bool {
+		return $this->upload_request;
+	}
+
+	public function lock( int $attachment_id ): bool {
+		$this->events[] = 'lock:' . $attachment_id;
+
+		if ( in_array( 'lock', $this->throwing, true ) ) {
+			throw new \RuntimeException( 'lock failed' );
+		}
+
+		if ( in_array( $attachment_id, $this->locked_elsewhere, true ) || in_array( $attachment_id, $this->held, true ) ) {
+			return false;
+		}
+
+		$this->held[] = $attachment_id;
+
+		return true;
+	}
+
+	public function unlock( int $attachment_id ): void {
+		$this->events[] = 'unlock:' . $attachment_id;
+		$this->held     = array_values( array_diff( $this->held, array( $attachment_id ) ) );
+
+		if ( in_array( 'unlock', $this->throwing, true ) ) {
+			throw new \RuntimeException( 'unlock failed' );
+		}
+	}
+
 	public function switch_to( int $attachment_id, string $path, string $mime ): bool {
 		$this->events[] = 'switch:' . basename( $path ) . ':' . $mime;
+
+		if ( in_array( 'switch_to', $this->throwing, true ) ) {
+			throw new \RuntimeException( 'switch_to failed' );
+		}
 
 		if ( ! $this->switch_succeeds ) {
 			return false;
@@ -243,6 +320,10 @@ final class FakeGateway implements Gateway {
 	public function save_metadata( int $attachment_id, array $metadata ): bool {
 		$this->events[] = 'save';
 
+		if ( in_array( 'save_metadata', $this->throwing, true ) ) {
+			throw new \RuntimeException( 'save_metadata failed' );
+		}
+
 		if ( ! $this->save_succeeds ) {
 			return false;
 		}
@@ -254,6 +335,10 @@ final class FakeGateway implements Gateway {
 
 	public function delete( string $path ): void {
 		$this->events[] = 'delete:' . basename( $path );
+
+		if ( in_array( 'delete', $this->throwing, true ) && str_ends_with( $path, '.jpg' ) ) {
+			throw new \RuntimeException( 'delete failed' );
+		}
 
 		if ( is_file( $path ) ) {
 			unlink( $path );
@@ -290,11 +375,34 @@ final class FakeGateway implements Gateway {
 		$this->events[]       = 'replace';
 		$this->replacements[] = $path_map;
 
+		if ( in_array( 'replace_urls', $this->throwing, true ) ) {
+			throw new \RuntimeException( 'replace_urls failed' );
+		}
+
 		return $this->replace_succeeds;
+	}
+
+	public function keep_files( int $attachment_id, array $path_map ): void {
+		$this->events[] = 'keep:' . count( $path_map );
+
+		if ( array() === $path_map ) {
+			unset( $this->kept[ $attachment_id ] );
+			return;
+		}
+
+		$this->kept[ $attachment_id ] = $path_map;
+	}
+
+	public function kept_files( int $attachment_id ): array {
+		return $this->kept[ $attachment_id ] ?? array();
 	}
 
 	public function converted( int $attachment_id, array $path_map ): void {
 		$this->announced[ $attachment_id ] = $path_map;
+	}
+
+	private function is_kept( int $attachment_id ): bool {
+		return 'converted' === ( $this->posts[ $attachment_id ]['status'] ?? '' ) && 'old_files_kept' === ( $this->records[ $attachment_id ]['reason'] ?? '' );
 	}
 
 	public function next_attachment( array $mimes, string $scope, int $after ): int {
@@ -305,7 +413,16 @@ final class FakeGateway implements Gateway {
 		foreach ( $ids as $id ) {
 			$status = $this->posts[ $id ]['status'] ?? '';
 
-			if ( $id <= $after || ! in_array( $this->posts[ $id ]['mime'], $mimes, true ) ) {
+			if ( $id <= $after ) {
+				continue;
+			}
+
+			// A converted image has the MIME type of its new file, so images with kept old files are found by status.
+			if ( 'retry' === $scope && $this->is_kept( $id ) ) {
+				return $id;
+			}
+
+			if ( ! in_array( $this->posts[ $id ]['mime'], $mimes, true ) ) {
 				continue;
 			}
 
@@ -324,10 +441,15 @@ final class FakeGateway implements Gateway {
 			'skipped'    => 0,
 			'failed'     => 0,
 			'processing' => 0,
+			'kept'       => 0,
 		);
 
-		foreach ( $this->posts as $post ) {
+		foreach ( $this->posts as $id => $post ) {
 			$status = $post['status'] ?? '';
+
+			if ( $this->is_kept( $id ) ) {
+				++$counts['kept'];
+			}
 
 			if ( 'converted' === $status ) {
 				++$counts['converted'];

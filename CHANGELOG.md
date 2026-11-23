@@ -24,8 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The *Server support* list on the settings page now tests the server instead of repeating what the image library claims: a small test image is encoded in each format and the file is checked. When the library says it supports a format but the test fails, the page says that conversion will probably fail. For AVIF, the site also fetches a small test file from its own address and checks that the server sends `image/avif`; a wrong type is shown in red and "could not check" in grey. The checks only inform and never block a conversion. Results are kept in a transient for 12 hours (10 minutes if the site could not reach itself), refreshed with a *Check again* button, and removed on uninstall.
 - README: how to send AVIF with the right content type on cPanel, Apache, LiteSpeed and nginx, and how to clear caches afterwards.
 
+- *Try again* in Convert existing images also finishes the cleanup of images that were converted but whose old files were kept. The map of the kept files is stored in the hidden post meta `_lunar_image_converter_kept` until then; the counts show these images as *Old files kept*.
+- Each image is locked while Convert existing images converts it, so two tabs cannot convert the same image at once. A lock that was left behind expires after five minutes and is removed on uninstall. The answer to a bulk request has a new field, `busy`.
+- The bulk page explains a server error (a time limit or a crash) with the HTTP status and the number of images done, and keeps the focus, the scroll position and the screen reader announcements calm during a run.
+
 ### Changed
 
+- Conversion on upload now only runs for real uploads: the media library, the media window, Add Media File and the REST API. Images whose sizes are made again (regenerating thumbnails) or that arrive through an importer are left alone and are converted by Convert existing images, which also replaces their addresses.
+- Old files are now deleted only when no content that the plugin cannot change still contains their address; otherwise they are kept and the image is marked converted with the reason `old_files_kept`.
+- The converted file must be a valid image of the same size as the original, and the plugin only reads and deletes files inside the uploads folder.
+- An error after the attachment was switched to the new file no longer leaves it half done: the switch is undone, or the image is recorded as converted with the old files kept.
+- Content is searched with one text for all files of an image instead of one search per file.
 - An unexpected error while converting an upload is now recorded as failed with the reason `error`; before, the upload was left without any status.
 - The copies that the image editor keeps to undo an edit are deleted together with the original files, so "Restore original" is no longer offered for a converted image.
 - Image processing in the browser (WordPress 7.1) is turned off while conversion is on, so the sizes of an upload are made on the server and converted together with the main file.

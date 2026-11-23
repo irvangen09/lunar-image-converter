@@ -11,6 +11,7 @@
 namespace LunarImageConverter\Admin;
 
 use LunarImageConverter\Tests\AdminStub;
+use LunarImageConverter\Tests\AjaxEnded;
 
 /**
  * The text domain argument is accepted by PHP without being declared.
@@ -178,4 +179,43 @@ function wp_verify_nonce( string $nonce, string $action ) {
  */
 function sanitize_text_field( string $text ): string {
 	return trim( $text );
+}
+
+/**
+ * @param string $action Nonce action.
+ * @param string $field  Request field that holds the nonce.
+ */
+function check_ajax_referer( string $action, string $field ): void {
+	if ( ! AdminStub::$ajax_nonce_ok || '' === $action || '' === $field ) {
+		throw new AjaxEnded( false, -1, 403 );
+	}
+}
+
+/**
+ * @param mixed $data   Data.
+ * @param int   $status HTTP status.
+ */
+function wp_send_json_error( $data = null, int $status = 200 ): void {
+	throw new AjaxEnded( false, $data, $status ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Stand-in for wp_die(); nothing is printed.
+}
+
+/**
+ * @param mixed $data Data.
+ */
+function wp_send_json_success( $data = null ): void {
+	throw new AjaxEnded( true, $data, 200 ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Stand-in for wp_die(); nothing is printed.
+}
+
+/**
+ * @param string $context Context.
+ */
+function wp_raise_memory_limit( string $context ): bool {
+	return '' !== $context;
+}
+
+/**
+ * @param string $key Key.
+ */
+function sanitize_key( string $key ): string {
+	return (string) preg_replace( '/[^a-z0-9_\\-]/', '', strtolower( $key ) );
 }

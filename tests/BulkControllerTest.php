@@ -44,10 +44,14 @@ final class BulkControllerTest extends TestCase {
 
 		$this->gateway = new FakeGateway( $this->base );
 		$this->values  = Settings::DEFAULTS;
+
+		AdminStub::reset();
 	}
 
 	protected function tearDown(): void {
 		OptionStub::$options = array();
+		AdminStub::reset();
+		$_POST = array();
 
 		$items = new \RecursiveIteratorIterator(
 			new \RecursiveDirectoryIterator( $this->base, \FilesystemIterator::SKIP_DOTS ),
@@ -82,6 +86,7 @@ final class BulkControllerTest extends TestCase {
 				'id'     => 3,
 				'next'   => 3,
 				'name'   => 'photo.jpg',
+				'busy'   => false,
 				'status' => 'converted',
 				'reason' => '',
 				'saved'  => $this->gateway->records[3]['saved'],
@@ -249,6 +254,178 @@ final class BulkControllerTest extends TestCase {
 		$this->assertFileExists( $this->dir . '/photo.jpg' );
 	}
 
+	public function test_an_image_that_another_request_is_converting_is_left_alone(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$this->gateway->locked_elsewhere = array( 3 );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertTrue( $result['busy'] );
+		$this->assertSame( 3, $result['next'], 'The cursor moves on.' );
+		$this->assertSame( array(), $this->gateway->records );
+		$this->assertSame( array(), $this->gateway->replacements );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+		$this->assertNotContains( 'unlock:3', $this->gateway->events, 'A lock held by someone else is not ours to release.' );
+	}
+
+	public function test_the_lock_is_released_after_a_conversion(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertFalse( $result['busy'] );
+		$this->assertSame( array(), $this->gateway->held );
+		$this->assertSame( 'lock:3', $this->gateway->events[0] );
+		$this->assertSame( 'unlock:3', $this->gateway->events[ count( $this->gateway->events ) - 1 ] );
+	}
+
+	public function test_the_lock_is_released_when_the_conversion_throws(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$this->gateway->throwing_metadata = array( 3 );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertSame( 'failed', $result['status'] );
+		$this->assertSame( array(), $this->gateway->held );
+	}
+
+	public function test_the_lock_is_released_even_when_the_failure_cannot_be_recorded(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$this->gateway->throwing_metadata = array( 3 );
+		$this->gateway->throwing_record   = true;
+
+		try {
+			$this->controller()->process_next( 'new', 0 );
+		} catch ( \RuntimeException ) {
+			$this->assertSame( array(), $this->gateway->held );
+
+			return;
+		}
+
+		$this->fail( 'The error from recording was expected.' );
+	}
+
+	public function test_a_lock_that_cannot_be_taken_because_of_an_error_only_skips_the_image(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$this->gateway->throwing = array( 'lock' );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertTrue( $result['busy'] );
+		$this->assertSame( array(), $this->gateway->records );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+	}
+
+	public function test_a_lock_that_cannot_be_released_does_not_hide_the_result(): void {
+		$this->add( 3, 'photo.jpg' );
+
+		$this->gateway->throwing = array( 'unlock' );
+
+		$result = $this->controller()->process_next( 'new', 0 );
+
+		$this->assertSame( 'converted', $result['status'] );
+		$this->assertFalse( $result['busy'] );
+	}
+
+	/**
+	 * Converts an image while its content cannot be changed, so its old files are kept; the content can be changed afterwards.
+	 */
+	private function kept_image( string $name = 'photo.jpg' ): void {
+		$this->add( 3, $name );
+
+		$this->gateway->replace_succeeds = false;
+
+		$this->controller()->process_next( 'new', 0 );
+
+		$this->gateway->replace_succeeds = true;
+		$this->gateway->metadata[3]      = $this->gateway->saved_metadata[3];
+	}
+
+	public function test_an_image_with_kept_files_is_cleaned_up_in_the_retry_scope(): void {
+		$this->kept_image();
+
+		$this->assertSame( 'old_files_kept', $this->gateway->records[3]['reason'] );
+
+		$result = $this->controller()->process_next( 'retry', 0 );
+
+		$this->assertSame( 3, $result['id'] );
+		$this->assertSame( 'converted', $result['status'] );
+		$this->assertSame( '', $result['reason'] );
+		$this->assertGreaterThan( 0, $result['saved'] );
+		$this->assertFalse( $result['alt'] );
+		$this->assertFileDoesNotExist( $this->dir . '/photo.jpg' );
+		$this->assertFileExists( $this->dir . '/photo.webp' );
+		$this->assertSame( 'photo.webp', $result['name'] );
+	}
+
+	public function test_alt_text_is_not_touched_when_only_the_cleanup_is_finished(): void {
+		$this->values['auto_alt_text'] = true;
+
+		$this->kept_image( 'sunset-beach.jpg' );
+
+		$this->assertSame( 'sunset beach', $this->gateway->alt_texts[3], 'The alt text was filled when the image was converted.' );
+
+		$this->gateway->alt_texts = array();
+
+		$result = $this->controller()->process_next( 'retry', 0 );
+
+		$this->assertFalse( $result['alt'] );
+		$this->assertSame( array(), $this->gateway->alt_texts );
+	}
+
+	public function test_an_image_with_kept_files_is_not_converted_again(): void {
+		$this->kept_image();
+
+		$encoded = count( $this->gateway->saved_metadata );
+
+		$this->controller()->process_next( 'retry', 0 );
+
+		$this->assertCount( $encoded, $this->gateway->saved_metadata );
+		$this->assertSame( array( 'processing', 'converted', 'converted' ), $this->gateway->status_log[3] );
+	}
+
+	public function test_the_new_scope_ignores_an_image_with_kept_files(): void {
+		$this->kept_image();
+
+		$this->assertTrue( $this->controller()->process_next( 'new', 0 )['done'] );
+	}
+
+	public function test_an_image_with_kept_files_is_counted(): void {
+		$this->kept_image();
+
+		$counts = $this->controller()->count();
+
+		$this->assertSame( 1, $counts['kept'] );
+		$this->assertSame( 1, $counts['converted'], 'It is converted, too.' );
+	}
+
+	public function test_an_error_while_cleaning_up_does_not_turn_a_converted_image_into_a_failed_one(): void {
+		$this->kept_image();
+
+		$this->gateway->throwing = array( 'delete' );
+
+		$result = $this->controller()->process_next( 'retry', 0 );
+
+		$this->assertSame( 'converted', $result['status'] );
+		$this->assertSame( 'old_files_kept', $result['reason'] );
+		$this->assertSame( array(), $this->gateway->held );
+	}
+
+	public function test_an_image_with_kept_files_stays_kept_while_the_urls_cannot_be_replaced(): void {
+		$this->kept_image();
+
+		$this->gateway->replace_succeeds = false;
+
+		$result = $this->controller()->process_next( 'retry', 0 );
+
+		$this->assertSame( 'old_files_kept', $result['reason'] );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+	}
+
 	public function test_fills_empty_alt_text_from_the_file_name_when_the_setting_is_on(): void {
 		$this->values['auto_alt_text'] = true;
 
@@ -357,6 +534,7 @@ final class BulkControllerTest extends TestCase {
 				'skipped'    => 1,
 				'failed'     => 1,
 				'processing' => 1,
+				'kept'       => 0,
 			),
 			$this->controller()->count()
 		);
@@ -452,5 +630,80 @@ final class BulkControllerTest extends TestCase {
 		$settings = new Settings();
 
 		return new BulkController( $settings, new Pipeline( $converter, $this->gateway, $environment ), $this->gateway, $environment, new AltText( $settings, $this->gateway ) );
+	}
+
+	/**
+	 * Runs a request handler and returns how it ended.
+	 *
+	 * @param callable $handler Handler to run.
+	 */
+	private function answer( callable $handler ): AjaxEnded {
+		$ended = null;
+
+		try {
+			$handler();
+		} catch ( AjaxEnded $caught ) {
+			$ended = $caught;
+		}
+
+		$this->assertTrue( $ended instanceof AjaxEnded, 'The handler did not answer.' );
+
+		return $ended;
+	}
+
+	public function test_the_ajax_actions_exist_for_logged_in_users_only(): void {
+		$this->controller()->register();
+
+		$this->assertContains( 'action:wp_ajax_lunar_image_converter_bulk_count:handle_count:10', AdminStub::$hooks );
+		$this->assertContains( 'action:wp_ajax_lunar_image_converter_bulk_process:handle_process:10', AdminStub::$hooks );
+
+		foreach ( AdminStub::$hooks as $hook ) {
+			$this->assertStringNotContainsString( 'nopriv', $hook );
+		}
+	}
+
+	public function test_a_request_without_a_valid_nonce_is_refused_before_an_image_is_touched(): void {
+		$this->add( 3, 'photo.jpg' );
+		AdminStub::$ajax_nonce_ok = false;
+		$controller               = $this->controller();
+
+		foreach ( array( 'handle_count', 'handle_process' ) as $handler ) {
+			$ended = $this->answer( array( $controller, $handler ) );
+
+			$this->assertFalse( $ended->success, $handler );
+		}
+
+		$this->assertSame( array(), $this->gateway->records );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+	}
+
+	public function test_a_user_without_the_capability_is_refused_before_an_image_is_touched(): void {
+		$this->add( 3, 'photo.jpg' );
+		AdminStub::$can_edit = false;
+		$controller          = $this->controller();
+
+		foreach ( array( 'handle_count', 'handle_process' ) as $handler ) {
+			$ended = $this->answer( array( $controller, $handler ) );
+
+			$this->assertFalse( $ended->success, $handler );
+			$this->assertSame( 403, $ended->status, $handler );
+		}
+
+		$this->assertSame( array(), $this->gateway->records );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+	}
+
+	public function test_an_administrator_with_a_valid_nonce_gets_the_result_of_the_next_image(): void {
+		$this->add( 3, 'photo.jpg' );
+		$_POST = array(
+			'scope' => 'new',
+			'after' => '0',
+		);
+
+		$ended = $this->answer( array( $this->controller(), 'handle_process' ) );
+
+		$this->assertTrue( $ended->success );
+		$this->assertSame( 3, $ended->payload['id'] );
+		$this->assertSame( 'converted', $ended->payload['status'] );
 	}
 }

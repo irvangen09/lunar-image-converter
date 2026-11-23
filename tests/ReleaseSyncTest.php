@@ -25,6 +25,8 @@ final class ReleaseSyncTest extends TestCase {
 			'package-lock.json'        => $lock['version'] ?? '',
 			'package-lock.json (root)' => $lock['packages']['']['version'] ?? '',
 			'CHANGELOG.md'             => $this->capture( 'CHANGELOG.md', '/^## \[(\d+\.\d+\.\d+)\]/m' ),
+			'.pot Project-Id-Version'  => $this->capture( 'languages/lunar-image-converter.pot', '/^"Project-Id-Version: Lunar Image Converter (\d+\.\d+\.\d+)\\\\n"$/m' ),
+			'.po Project-Id-Version'   => $this->capture( 'languages/lunar-image-converter-id_ID.po', '/^"Project-Id-Version: Lunar Image Converter (\d+\.\d+\.\d+)\\\\n"$/m' ),
 		);
 
 		foreach ( $versions as $source => $version ) {

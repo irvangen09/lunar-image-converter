@@ -213,6 +213,14 @@ final class TranslationTest extends TestCase {
 		}
 	}
 
+	public function test_translation_files_send_bug_reports_to_the_project(): void {
+		$files = array_merge( array( self::root() . '/languages/lunar-image-converter.pot' ), self::translations() );
+
+		foreach ( $files as $file ) {
+			$this->assertStringContainsString( '"Report-Msgid-Bugs-To: https://github.com/irvangen09/lunar-image-converter/issues\\n"', (string) file_get_contents( $file ), basename( $file ) . ': WP-CLI writes a WordPress.org address; change it back.' );
+		}
+	}
+
 	public function test_the_main_file_declares_where_translations_live(): void {
 		$main = (string) file_get_contents( self::root() . '/lunar-image-converter.php' );
 

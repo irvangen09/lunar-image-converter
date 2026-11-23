@@ -8,6 +8,7 @@
 namespace LunarImageConverter\Conversion;
 
 use LunarImageConverter\Content\UrlReplacer;
+use LunarImageConverter\Content\WpContentStore;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -22,10 +23,25 @@ final class WpGateway implements Gateway {
 
 	public const META_SAVED = '_lunar_image_converter_saved';
 
+	public const META_KEPT = '_lunar_image_converter_kept';
+
 	/**
 	 * Post meta keys that hold the conversion state of an attachment.
 	 */
-	public const META_KEYS = array( self::META_STATUS, self::META_REASON, self::META_SAVED );
+	public const META_KEYS = array( self::META_STATUS, self::META_REASON, self::META_SAVED, self::META_KEPT );
+
+	/**
+	 * Start of the name of the option row that is the lock of an attachment; the ID follows.
+	 *
+	 * The rows are internal and not part of the stable contract. They exist only while an image is converted,
+	 * and uninstall.php removes any that are left.
+	 */
+	public const LOCK_PREFIX = 'lunar_image_converter_lock_';
+
+	/**
+	 * Seconds after which a lock that was never released counts as expired.
+	 */
+	public const LOCK_SECONDS = 300;
 
 	/**
 	 * Post meta key where the image editor keeps the files that let an edit be undone.
@@ -126,6 +142,18 @@ final class WpGateway implements Gateway {
 	/**
 	 * {@inheritDoc}
 	 *
+	 * @param string $path Absolute path.
+	 * @return int[]
+	 */
+	public function image_size( string $path ): array {
+		$size = wp_getimagesize( $path );
+
+		return is_array( $size ) ? array( (int) $size[0], (int) $size[1] ) : array();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
 	 * @param string $format  Output format key.
 	 * @param float  $built_in Built-in limit.
 	 */
@@ -190,6 +218,66 @@ final class WpGateway implements Gateway {
 
 	/**
 	 * {@inheritDoc}
+	 */
+	public function is_upload_request(): bool {
+		global $pagenow;
+
+		// The uploader of the media modal and of Media > Add New posts to async-upload.php; the classic form posts to media-new.php.
+		if ( in_array( $pagenow, array( 'async-upload.php', 'media-new.php' ), true ) ) {
+			return true;
+		}
+
+		return wp_doing_ajax()
+			&& isset( $_REQUEST['action'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only reads which request this is; WordPress checks the nonce of the upload itself.
+			&& 'upload-attachment' === sanitize_key( wp_unslash( $_REQUEST['action'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Same.
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * The lock is a row in the options table with a unique name: the insert succeeds for one request only,
+	 * which a read followed by a write could not guarantee.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function lock( int $attachment_id ): bool {
+		global $wpdb;
+
+		$name  = self::LOCK_PREFIX . $attachment_id;
+		$now   = time();
+		$until = (string) ( $now + self::LOCK_SECONDS );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- The lock is a row that only a unique insert can create; the options API cannot do that.
+		if ( 1 === (int) $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')", $name, $until ) ) ) {
+			return true;
+		}
+
+		$held = $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $name ) );
+
+		if ( null === $held || (int) $held > $now ) {
+			return false;
+		}
+
+		// Expired. The update names the value it saw, so when two requests find the same expired lock only one takes it.
+		$taken = 1 === (int) $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", $until, $name, $held ) );
+		// phpcs:enable
+
+		return $taken;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function unlock( int $attachment_id ): void {
+		global $wpdb;
+
+		$wpdb->delete( $wpdb->options, array( 'option_name' => self::LOCK_PREFIX . $attachment_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Removes the plugin's own lock row.
+	}
+
+	/**
+	 * {@inheritDoc}
 	 *
 	 * @param int                  $attachment_id Attachment ID.
 	 * @param array<string, mixed> $metadata      Metadata.
@@ -204,6 +292,11 @@ final class WpGateway implements Gateway {
 	 * @param string $path Absolute path.
 	 */
 	public function delete( string $path ): void {
+		// Paths come from the database; nothing outside the uploads directory is ever removed.
+		if ( ! UploadsPath::contains( $this->base_dir(), $path ) ) {
+			return;
+		}
+
 		wp_delete_file( $path );
 	}
 
@@ -279,10 +372,50 @@ final class WpGateway implements Gateway {
 		$uploads = wp_get_upload_dir();
 
 		try {
-			return ( new UrlReplacer() )->replace( $path_map, (string) $uploads['baseurl'] );
+			return ( new UrlReplacer( new WpContentStore() ) )->replace( $path_map, (string) $uploads['baseurl'] );
 		} catch ( \Throwable ) {
 			return false;
 		}
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int                   $attachment_id Attachment ID.
+	 * @param array<string, string> $path_map      Old path => new path.
+	 */
+	public function keep_files( int $attachment_id, array $path_map ): void {
+		if ( array() === $path_map ) {
+			delete_post_meta( $attachment_id, self::META_KEPT );
+			return;
+		}
+
+		// WordPress removes slashes from meta values, so a backslash in a file name needs to be doubled first.
+		update_post_meta( $attachment_id, self::META_KEPT, wp_slash( $path_map ) );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return array<string, string>
+	 */
+	public function kept_files( int $attachment_id ): array {
+		$map = get_post_meta( $attachment_id, self::META_KEPT, true );
+
+		if ( ! is_array( $map ) ) {
+			return array();
+		}
+
+		$clean = array();
+
+		foreach ( $map as $old => $new ) {
+			if ( is_string( $old ) && is_string( $new ) && '' !== $old && '' !== $new ) {
+				$clean[ $old ] = $new;
+			}
+		}
+
+		return $clean;
 	}
 
 	/**
@@ -334,21 +467,22 @@ final class WpGateway implements Gateway {
 		if ( 'retry' === $scope ) {
 			$states  = array( Pipeline::STATUS_SKIPPED, Pipeline::STATUS_FAILED, Pipeline::STATUS_PROCESSING );
 			$holders = implode( ',', array_fill( 0, count( $states ), '%s' ) );
-			$where   = 'm.meta_value IN (' . $holders . ')';
-			$args    = array_merge( $args, $states );
+			// A converted image has the MIME type of its new file, so images whose old files were kept are found by their status.
+			$where = '(m.meta_value IN (' . $holders . ') AND p.post_mime_type IN (' . $mime_holders . ')) OR (m.meta_value = %s AND r.meta_value = %s)';
+			$args  = array_merge( $args, array( self::META_REASON ), $states, $mimes, array( Pipeline::STATUS_CONVERTED, Pipeline::REASON_OLD_FILES_KEPT, $after ) );
 		} else {
-			$where = 'm.meta_id IS NULL';
+			$where = 'm.meta_id IS NULL AND p.post_mime_type IN (' . $mime_holders . ')';
+			$args  = array_merge( $args, array( self::META_REASON ), $mimes, array( $after ) );
 		}
-
-		$args = array_merge( $args, $mimes, array( $after ) );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- The placeholders are built from the number of values; a custom query is the only way to join on a missing meta row.
 		$id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT p.ID FROM {$wpdb->posts} p
 				LEFT JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
+				LEFT JOIN {$wpdb->postmeta} r ON r.post_id = p.ID AND r.meta_key = %s
 				WHERE p.post_type = 'attachment' AND p.post_status <> 'trash'
-				AND {$where} AND p.post_mime_type IN ({$mime_holders}) AND p.ID > %d
+				AND ({$where}) AND p.ID > %d
 				ORDER BY p.ID ASC LIMIT 1",
 				$args
 			)
@@ -373,6 +507,7 @@ final class WpGateway implements Gateway {
 			Pipeline::STATUS_SKIPPED    => 0,
 			Pipeline::STATUS_FAILED     => 0,
 			Pipeline::STATUS_PROCESSING => 0,
+			'kept'                      => 0,
 		);
 
 		$args      = array( self::META_STATUS, Pipeline::STATUS_CONVERTED );
@@ -398,10 +533,25 @@ final class WpGateway implements Gateway {
 		foreach ( (array) $rows as $row ) {
 			$key = '' === $row->state ? 'pending' : $row->state;
 
-			if ( isset( $counts[ $key ] ) ) {
+			if ( isset( $counts[ $key ] ) && 'kept' !== $key ) {
 				$counts[ $key ] = (int) $row->total;
 			}
 		}
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Counting by two meta values needs a custom query.
+		$counts['kept'] = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s AND m.meta_value = %s
+				INNER JOIN {$wpdb->postmeta} r ON r.post_id = p.ID AND r.meta_key = %s AND r.meta_value = %s
+				WHERE p.post_type = 'attachment' AND p.post_status <> 'trash'",
+				self::META_STATUS,
+				Pipeline::STATUS_CONVERTED,
+				self::META_REASON,
+				Pipeline::REASON_OLD_FILES_KEPT
+			)
+		);
+		// phpcs:enable
 
 		return $counts;
 	}

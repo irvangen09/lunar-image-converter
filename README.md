@@ -6,9 +6,9 @@ A WordPress plugin that converts JPEG and PNG images to WebP or AVIF, replaces t
 
 ## What it does
 
-- **Converts on upload.** A new JPEG or PNG becomes a WebP or AVIF file, together with every size WordPress makes for it. The original files are deleted.
+- **Converts on upload.** A new JPEG or PNG that you upload in the media library, the media window of the editors, the Add Media File page or through the REST API becomes a WebP or AVIF file, together with every size WordPress makes for it. The original files are deleted. Images that arrive any other way (a site import, a plugin that regenerates thumbnails) are left alone, because their addresses may already be in your content; convert them with *Convert existing images*, which also replaces the addresses.
 - **Converts the images you already have.** *Convert existing images* works through the media library one image at a time, with progress, a stop button and a retry for images that were skipped or failed.
-- **Replaces addresses in your content.** When an existing image is converted, its old addresses are replaced in posts, pages, other public post types, reusable blocks, templates, template parts and navigation menus.
+- **Replaces addresses in your content.** When an existing image is converted, its old addresses are replaced in posts, pages, other public post types, reusable blocks, templates, template parts and navigation menus. If the address of the image is still found anywhere else (in the custom CSS of a theme, say), the old files are kept, so nothing points at a missing file.
 - **Keeps what is not worth converting.** If the result is not smaller than the original, the original stays untouched.
 - **Optionally fills empty alt text** from the file name.
 
@@ -20,6 +20,9 @@ The attachment ID never changes, so featured images, galleries and anything else
 - **"Restore original" in the image editor is no longer available** for a converted image. The backups the editor keeps for undoing edits are deleted too.
 - **Back up your uploads folder and your database** before you convert existing images. The plugin asks you to confirm this every time you open the page.
 - Only the content listed above is searched. **Custom fields, page builder data, serialized data, revisions, excerpts and images on a CDN are not changed.** An image used there can stop working after it is converted.
+- **Only addresses on the host of your uploads address are replaced** (with `http` or `https`, with the address in full or starting at the site root). A post that uses another host name for the same image, such as the `www` form of a site that does not use it, an older domain or a staging address, is not changed, and its image stops working once the old file is gone.
+- **Caches are not cleared.** After you convert images, clear your page cache and your CDN, or pages keep pointing at the old files. See *For developers* to do this automatically.
+- Converting a large image needs memory. The plugin asks WordPress for the larger memory limit that it uses for images, but a host can refuse; an image that runs out of memory is left as it was or shown as interrupted.
 
 ## Requirements
 
@@ -94,12 +97,13 @@ Then clear every cache between your server and the visitor: your caching plugin 
 
 ## How conversion works
 
-- Conversion runs inside the upload request. It never makes an upload fail: if anything goes wrong, the image stays as it was.
+- Conversion runs inside the upload request. A failed conversion does not make the upload fail: the image stays as it was. A server that runs out of time or memory in the middle of a conversion can still end the request; the image is then shown as interrupted and can be tried again.
 - An image is skipped, and left untouched, when:
   - the converted file is not smaller than the original;
   - it is larger than 25 megapixels (WebP) or 8 megapixels (AVIF);
   - fewer than 10 seconds of the request's time limit remain;
-  - the server cannot encode the format, or WordPress does not allow that file type.
+  - the server cannot encode the format, or WordPress does not allow that file type;
+  - the converted file is not a valid image of the same size as the original, or a file lies outside the uploads folder.
 - All sizes of an image are converted together. If one file fails, none is replaced.
 - Each image gets a status (converted, skipped or failed) and a reason, stored in hidden post meta. Only converted images are never converted again; skipped and failed ones can be tried again.
 - **You can see what happened to each image.** In the media library, the list view has an *Image Converter* column, the attachment details and the edit screen show the status, and an image that should have been converted but was not shows why (for example, "Skipped (this server cannot encode the chosen format)"). An image that is only not smaller than the original is shown in the same way, but is not reported again.
@@ -112,8 +116,11 @@ Then clear every cache between your server and the visitor: your caching plugin 
 On the same page, tick the backup confirmation and press *Convert images*.
 
 - One image is processed per request, in ID order. Keep the tab open: if you close it, the work stops, and the images converted so far stay converted.
-- *Stop* ends the run after the current image. *Try again* picks up skipped, failed and interrupted images.
-- If the old addresses cannot be replaced everywhere (for example because of a database error), the old files are kept and the image is still marked converted, so nothing points at a missing file.
+- *Stop* ends the run after the current image. *Try again* picks up skipped, failed and interrupted images, and converted images whose old files were kept.
+- If the old addresses cannot be replaced everywhere (for example because of a database error, or because the address is also used in content that the plugin does not change), the old files are kept and the image is still marked converted, with the reason "old files kept", so nothing points at a missing file. *Try again* finishes the cleanup of such an image once the addresses can be replaced; it does not convert the image a second time.
+- Each image is locked while it is converted. If you open the page in two tabs, or two people run it, an image that the other one is working on is skipped. A lock that was left behind by a request that died expires after five minutes.
+- If the server stops answering (a time limit or a crash), the page says so, with the status code, and how many images were done. The image that was being converted is shown as interrupted; use *Try again* to continue.
+- Clear your page cache and CDN when the run is done.
 - Searching the content of a very large site (tens of thousands of posts) has not been measured and may be slow.
 
 ## Alt text
@@ -140,7 +147,7 @@ add_action( 'lunar_image_converter_converted', function ( int $attachment_id, ar
 }, 10, 2 );
 ```
 
-Use it to purge a cache or a CDN. A listener that throws an exception is ignored, so it cannot undo a finished conversion.
+Use it to purge a cache or a CDN. A listener that throws an exception is ignored, so it cannot undo a finished conversion. The plugin does not purge any cache itself, because every caching plugin does it differently.
 
 **Filter `lunar_image_converter_max_megapixels`** changes the largest image that is converted.
 
@@ -152,17 +159,17 @@ add_filter( 'lunar_image_converter_max_megapixels', function ( float $limit, str
 
 The built-in limits are 25 (WebP) and 8 (AVIF).
 
-The option name, the post meta keys, these two hooks, the AJAX actions and the status values will not change after the first public release.
+The option name, the post meta keys, these two hooks, the AJAX actions and the status values will not change after the first public release. The rows that lock an image while it is converted are internal and may change.
 
 ## Removing the plugin
 
-Deleting the plugin removes its settings, the hidden status meta, the saved upload notices and the saved server test results. Images that were converted stay converted; the plugin does not turn them back.
+Deleting the plugin removes its settings, the hidden status meta, the saved upload notices, the saved server test results and any lock that was left behind. Images that were converted stay converted; the plugin does not turn them back.
 
 ## Status and testing
 
 - Automated tests cover the conversion logic, content replacement, the bulk controller and alt text, and run in GitHub Actions on PHP 8.1 and 8.4.
 - The plugin was also run against a real WordPress 7.1.4 in a development environment: upload and bulk conversion, scaled images, edited images, content replacement, alt text, and the settings page in a browser.
-- Not tested yet: uploads from Chrome with WordPress 7.1's in-browser processing, AVIF on a production server, LiteSpeed Cache, multisite, and the speed of content replacement on very large sites.
+- Not tested yet: uploads from Chrome with WordPress 7.1's in-browser processing, AVIF on a production server, LiteSpeed Cache, multisite, the lock and the content search on a real MySQL database, importing a site, regenerating thumbnails, and the speed of content replacement on very large sites. The bulk page was checked in a browser with a test server, not yet with screen readers.
 
 ## Contributing and security
 

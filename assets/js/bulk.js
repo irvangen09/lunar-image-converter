@@ -29,6 +29,7 @@
 	const countsText = document.getElementById( 'lic-bulk-counts' );
 	const progress = document.getElementById( 'lic-bulk-progress' );
 	const summary = document.getElementById( 'lic-bulk-summary' );
+	const status = document.getElementById( 'lic-bulk-status' );
 	const log = document.getElementById( 'lic-bulk-log' );
 
 	let counts = null;
@@ -57,34 +58,58 @@
 		const body = new URLSearchParams(
 			Object.assign( { action, nonce: data.nonce }, extra )
 		);
-		let json;
+		let response;
+		let json = null;
 
 		try {
-			const response = await fetch( data.ajaxUrl, {
+			response = await fetch( data.ajaxUrl, {
 				method: 'POST',
 				credentials: 'same-origin',
 				body,
 			} );
-
-			json = await response.json();
 		} catch {
 			throw new Error( data.text.requestFailed );
 		}
 
-		if ( ! json || ! json.success ) {
-			const message = json && json.data && json.data.message;
+		try {
+			json = await response.json();
+		} catch {
+			json = null;
+		}
+
+		if ( ! json ) {
+			// The server answered with something else than JSON: a timeout, a crash or a refused request.
+			throw new Error(
+				response.ok
+					? data.text.requestFailed
+					: format( data.text.serverError, response.status )
+			);
+		}
+
+		if ( ! json.success ) {
+			const message = json.data && json.data.message;
 			throw new Error( message || data.text.requestFailed );
 		}
 
 		return json.data;
 	}
 
+	// Images converted whose old files were kept are counted as converted too; they are listed on their own.
+	const KEPT = 'kept';
+
 	function retryCount() {
 		return counts
 			? counts[ STATUS.skipped ] +
 					counts[ STATUS.failed ] +
-					counts[ STATUS.processing ]
+					counts[ STATUS.processing ] +
+					counts[ KEPT ]
 			: 0;
+	}
+
+	// Announces a message to screen readers without moving the focus.
+	function announce( message ) {
+		status.textContent = '';
+		status.textContent = message;
 	}
 
 	function updateButtons() {
@@ -107,6 +132,7 @@
 			STATUS.skipped,
 			STATUS.failed,
 			STATUS.processing,
+			KEPT,
 		];
 
 		countsText.textContent = keys
@@ -149,13 +175,59 @@
 				)
 			: format( data.text.logLine, result.id, result.name, label );
 
+		const atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
+
 		log.appendChild( item );
 
 		while ( log.children.length > MAX_LOG_LINES ) {
 			log.removeChild( log.firstChild );
 		}
 
-		item.scrollIntoView( { block: 'nearest' } );
+		// Only the list scrolls, and only while the reader is at its end; the page never moves.
+		if ( atEnd ) {
+			log.scrollTop = log.scrollHeight;
+		}
+	}
+
+	function addBusyLog( result ) {
+		const item = document.createElement( 'li' );
+
+		item.textContent = format( data.text.logBusy, result.id, result.name );
+		log.appendChild( item );
+	}
+
+	function tallyDone( tally, result ) {
+		if ( result.busy ) {
+			tally.skipped += 1;
+		} else if ( STATUS.converted === result.status && ! result.reason ) {
+			tally.converted += 1;
+			tally.saved += result.saved;
+		} else if ( STATUS.failed === result.status ) {
+			tally.failed += 1;
+		} else {
+			// Skipped, interrupted, or converted with the old files still kept.
+			tally.skipped += 1;
+		}
+
+		if ( result.alt ) {
+			tally.alt += 1;
+		}
+	}
+
+	// Puts the focus back where the reader can continue when the button they used has gone.
+	function restoreFocus() {
+		const active = summary.ownerDocument.activeElement;
+
+		if (
+			! active ||
+			active === summary.ownerDocument.body ||
+			active === stop
+		) {
+			summary.focus();
+			return true;
+		}
+
+		return false;
 	}
 
 	async function run( scope ) {
@@ -171,7 +243,11 @@
 		progress.value = 0;
 		progress.hidden = false;
 		summary.textContent = format( data.text.running, 0, total );
+		announce( summary.textContent );
+		stop.disabled = false;
 		updateButtons();
+		// The button that started the run is disabled now; the focus goes to Stop.
+		stop.focus();
 
 		try {
 			while ( ! stopRequested ) {
@@ -187,20 +263,14 @@
 				after = result.next;
 				handled += 1;
 
-				if ( STATUS.converted === result.status ) {
-					tally.converted += 1;
-					tally.saved += result.saved;
-				} else if ( STATUS.failed === result.status ) {
-					tally.failed += 1;
+				tallyDone( tally, result );
+
+				if ( result.busy ) {
+					addBusyLog( result );
 				} else {
-					tally.skipped += 1;
+					addLog( result );
 				}
 
-				if ( result.alt ) {
-					tally.alt += 1;
-				}
-
-				addLog( result );
 				progress.value = Math.min( handled, progress.max );
 				summary.textContent = format(
 					data.text.running,
@@ -222,12 +292,23 @@
 					' ' + format( data.text.altAdded, tally.alt );
 			}
 		} catch ( error ) {
-			summary.textContent = error.message;
+			summary.textContent = format(
+				data.text.errorSummary,
+				error.message,
+				tally.converted,
+				tally.skipped,
+				tally.failed
+			);
 		}
 
 		running = false;
 		progress.hidden = true;
 		await refreshCounts();
+
+		// The summary is read out when it takes the focus; otherwise the status region says it.
+		if ( ! restoreFocus() ) {
+			announce( summary.textContent );
+		}
 	}
 
 	backup.addEventListener( 'change', updateButtons );
@@ -247,6 +328,8 @@
 	stop.addEventListener( 'click', function () {
 		stopRequested = true;
 		stop.disabled = true;
+		// The request in progress finishes first; the summary tells when the run has stopped.
+		announce( data.text.stopping );
 	} );
 
 	window.addEventListener( 'beforeunload', function ( event ) {

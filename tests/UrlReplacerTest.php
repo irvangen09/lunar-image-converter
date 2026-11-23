@@ -254,4 +254,24 @@ final class UrlReplacerTest extends TestCase {
 			$this->rewrite( $content, $this->photo() )
 		);
 	}
+
+	public function test_a_pattern_that_cannot_run_gives_null_and_never_emptied_content(): void {
+		// A name no other test uses: PHP keeps compiled patterns, and one compiled earlier ignores the setting below.
+		$rules   = UrlReplacer::build_rules( array( '2026/11/pcre-limit.jpg' => '2026/11/pcre-limit.webp' ), self::BASE );
+		$content = '<img src="http://example.test/wp-content/uploads/2026/11/pcre-limit.jpg"> ' . str_repeat( 'x', 20 );
+		$limit   = (string) ini_get( 'pcre.backtrack_limit' );
+		$jit     = (string) ini_get( 'pcre.jit' );
+
+		ini_set( 'pcre.jit', '0' ); // phpcs:ignore WordPress.PHP.IniSet.Risky -- The test makes the regular expression fail on purpose.
+		ini_set( 'pcre.backtrack_limit', '5' ); // phpcs:ignore WordPress.PHP.IniSet.Risky -- The test makes the regular expression fail on purpose.
+
+		try {
+			$result = UrlReplacer::rewrite( $content, $rules );
+		} finally {
+			ini_set( 'pcre.backtrack_limit', $limit ); // phpcs:ignore WordPress.PHP.IniSet.Risky -- Restores the value.
+			ini_set( 'pcre.jit', $jit ); // phpcs:ignore WordPress.PHP.IniSet.Risky -- Restores the value.
+		}
+
+		$this->assertNull( $result );
+	}
 }

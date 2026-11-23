@@ -21,10 +21,14 @@ final class UrlReplacer {
 	 */
 	private const PAGE = 50;
 
+	private ContentStore $store;
+
 	/**
-	 * Post types that hold block content without being public.
+	 * @param ContentStore $store Where post content is read and written.
 	 */
-	private const BLOCK_TYPES = array( 'wp_block', 'wp_template', 'wp_template_part', 'wp_navigation' );
+	public function __construct( ContentStore $store ) {
+		$this->store = $store;
+	}
 
 	/**
 	 * Builds the rules that rewrite old URLs into new ones.
@@ -129,97 +133,107 @@ final class UrlReplacer {
 	}
 
 	/**
-	 * Replaces the URLs in the content of all posts that mention one of the old files.
+	 * Lists the texts that every post holding one of the old files must contain, to narrow the search.
 	 *
-	 * Stops at the first problem and returns false; what was already replaced stays replaced and still
-	 * points at files that exist.
+	 * All files of an image start with the same text, so one text finds them all; the exact match is made by the
+	 * rules afterwards. The text is also given percent-encoded, as it appears in an encoded URL.
+	 *
+	 * @param array<string, string> $path_map Old path => new path, both relative to the uploads directory.
+	 * @return string[]
+	 */
+	public static function needles( array $path_map ): array {
+		$names = array();
+
+		foreach ( array_keys( $path_map ) as $old ) {
+			$names[] = basename( $old );
+		}
+
+		if ( array() === $names ) {
+			return array();
+		}
+
+		$prefix = array_shift( $names );
+
+		foreach ( $names as $name ) {
+			$length = 0;
+			$limit  = min( strlen( $prefix ), strlen( $name ) );
+
+			while ( $length < $limit && $prefix[ $length ] === $name[ $length ] ) {
+				++$length;
+			}
+
+			$prefix = substr( $prefix, 0, $length );
+		}
+
+		// Cutting at a byte can split a character, and a text with half a character matches nothing sensible.
+		while ( '' !== $prefix && 1 !== preg_match( '//u', $prefix ) ) {
+			$prefix = substr( $prefix, 0, -1 );
+		}
+
+		if ( '' !== $prefix ) {
+			return array_values( array_unique( array( $prefix, self::encode( $prefix ) ) ) );
+		}
+
+		// Files with nothing in common: look for each name.
+		$needles = array();
+
+		foreach ( array_keys( $path_map ) as $old ) {
+			$needles[] = basename( $old );
+			$needles[] = self::encode( basename( $old ) );
+		}
+
+		return array_values( array_unique( $needles ) );
+	}
+
+	/**
+	 * Replaces the old URLs in the content of the posts that hold them.
+	 *
+	 * Returns true only when nothing that needs the old files is left: every place that is rewritten was
+	 * updated, and no other content still refers to them. Content of other types is never changed; when it
+	 * refers to an old file the result is false, so the file is kept.
 	 *
 	 * @param array<string, string> $path_map Old path => new path, both relative to the uploads directory.
 	 * @param string                $base_url URL of the uploads directory.
-	 * @return bool Whether every post that needed it was updated.
+	 * @return bool
 	 */
 	public function replace( array $path_map, string $base_url ): bool {
-		global $wpdb;
-
 		$rules = self::build_rules( $path_map, $base_url );
 
 		if ( '' === $rules['pattern'] ) {
 			return true;
 		}
 
-		$needles = array();
-
-		foreach ( array_keys( $path_map ) as $old ) {
-			$name      = basename( $old );
-			$needles[] = $name;
-			$needles[] = self::encode( $name );
-		}
-
-		$needles = array_values( array_unique( $needles ) );
-		$types   = $this->post_types();
-		$like_in = array();
-
-		foreach ( $needles as $needle ) {
-			$like_in[] = '%' . $wpdb->esc_like( $needle ) . '%';
-		}
-
-		$like_holders = implode( ' OR ', array_fill( 0, count( $like_in ), 'post_content LIKE %s' ) );
-		$type_holders = implode( ',', array_fill( 0, count( $types ), '%s' ) );
-		$after        = 0;
+		$needles    = self::needles( $path_map );
+		$rewritable = array_flip( $this->store->rewritable_types() );
+		$after      = 0;
+		$left       = false;
 
 		do {
-			$args = array_merge( array( $after ), $types, $like_in, array( self::PAGE ) );
-
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- The placeholders are built from the number of values; searching post content for file names needs a custom query.
-			$rows = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT ID, post_content FROM {$wpdb->posts}
-					WHERE ID > %d AND post_type IN ({$type_holders}) AND post_status <> 'auto-draft'
-					AND ({$like_holders})
-					ORDER BY ID ASC LIMIT %d",
-					$args
-				)
-			);
-			// phpcs:enable
-
-			$rows    = (array) $rows;
-			$fetched = count( $rows );
+			$rows = $this->store->find( $after, $needles, self::PAGE );
+			$full = self::PAGE === count( $rows );
 
 			foreach ( $rows as $row ) {
-				$after   = (int) $row->ID;
-				$updated = self::rewrite( (string) $row->post_content, $rules );
+				$after = $row['id'];
+
+				if ( ! isset( $rewritable[ $row['type'] ] ) ) {
+					// A match that cannot be read counts as a match: the file stays.
+					$left = $left || 0 !== preg_match( $rules['pattern'], $row['content'] );
+					continue;
+				}
+
+				$updated = self::rewrite( $row['content'], $rules );
 
 				if ( null === $updated ) {
 					return false;
 				}
 
-				if ( $updated === $row->post_content ) {
-					continue;
-				}
-
-				// A direct update keeps the modified date and creates no revision: the text did not change.
-				$done = $wpdb->update( $wpdb->posts, array( 'post_content' => $updated ), array( 'ID' => $after ), array( '%s' ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-
-				if ( false === $done ) {
+				if ( $updated !== $row['content'] && ! $this->store->update( $row['id'], $updated ) ) {
 					return false;
 				}
-
-				clean_post_cache( $after );
 			}
-		} while ( self::PAGE === $fetched );
+		} while ( $full );
 
-		return true;
-	}
-
-	/**
-	 * Lists the post types whose content is searched.
-	 *
-	 * @return string[]
-	 */
-	private function post_types(): array {
-		$types = array_diff( array_values( get_post_types( array( 'public' => true ) ) ), array( 'attachment' ) );
-
-		return array_values( array_unique( array_merge( $types, self::BLOCK_TYPES ) ) );
+		return ! $left;
 	}
 
 	/**

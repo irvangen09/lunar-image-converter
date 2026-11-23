@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Lunar Image Converter 0.1.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/lunar-image-converter\n"
+"Report-Msgid-Bugs-To: https://github.com/irvangen09/lunar-image-converter/issues\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -77,7 +77,7 @@ msgid "Convert images"
 msgstr ""
 
 #: includes/Admin/BulkPanel.php:84
-msgid "Try again: skipped and failed images"
+msgid "Try again: skipped, failed and unfinished images"
 msgstr ""
 
 #: includes/Admin/BulkPanel.php:85
@@ -433,4 +433,25 @@ msgstr ""
 #: lunar-image-converter.php:78
 #, php-format
 msgid "Lunar Image Converter requires WordPress %1$s or higher. This site runs WordPress %2$s, so the plugin is inactive."
+msgstr ""
+
+msgid "Old files kept"
+msgstr ""
+
+#. translators: %s: HTTP status code, for example 504.
+#, php-format
+msgid "The server did not finish the request (HTTP %1$s). This is often a time limit or a crash on the server. Images already converted stay converted; an image that was being converted is marked as interrupted. Use \"Try again\" to continue."
+msgstr ""
+
+#. translators: 1: what went wrong, 2: converted, 3: skipped, 4: failed.
+#, php-format
+msgid "%1$s Until then: converted %2$s, skipped %3$s, failed %4$s."
+msgstr ""
+
+msgid "Stopping after the current image."
+msgstr ""
+
+#. translators: 1: attachment ID, 2: file name.
+#, php-format
+msgid "#%1$s %2$s: skipped, another request is working on it"
 msgstr ""

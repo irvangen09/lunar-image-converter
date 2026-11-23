@@ -73,6 +73,14 @@ interface Gateway {
 	public function mime_of_file( string $path ): string;
 
 	/**
+	 * Returns the width and height found by reading a file, or an empty array when it is not a readable image.
+	 *
+	 * @param string $path Absolute path.
+	 * @return int[]
+	 */
+	public function image_size( string $path ): array;
+
+	/**
 	 * Returns the largest image, in megapixels, that may be converted.
 	 *
 	 * @param string $format  Output format key.
@@ -84,6 +92,31 @@ interface Gateway {
 	 * Returns the seconds left before the request runs out of time.
 	 */
 	public function seconds_left(): float;
+
+	/**
+	 * Tells whether the request is a browser upload of the media library: the upload of the media modal, the
+	 * uploader of the Add New page or its classic form.
+	 *
+	 * Other requests that generate image sizes, such as regenerating thumbnails or importing a site, are not.
+	 */
+	public function is_upload_request(): bool;
+
+	/**
+	 * Takes the lock of an attachment, so that only one request converts it at a time.
+	 *
+	 * Returns false when another request holds the lock. A lock that was not released, because its request died,
+	 * expires after a few minutes.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function lock( int $attachment_id ): bool;
+
+	/**
+	 * Releases the lock of an attachment.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function unlock( int $attachment_id ): void;
 
 	/**
 	 * Points an attachment at a new main file and MIME type.
@@ -152,9 +185,26 @@ interface Gateway {
 	 * Replaces the URLs of old files by the URLs of their converted files in the post content.
 	 *
 	 * @param array<string, string> $path_map Old path => new path, both relative to the uploads directory.
-	 * @return bool Whether every place that needed it was updated.
+	 * @return bool Whether every place that needed it was updated and no other content still refers to the old files.
 	 */
 	public function replace_urls( array $path_map ): bool;
+
+	/**
+	 * Remembers which old files of an image were kept, and what replaced them, so the cleanup can be finished
+	 * later. An empty map forgets it.
+	 *
+	 * @param int                   $attachment_id Attachment ID.
+	 * @param array<string, string> $path_map      Old path => new path, both relative to the uploads directory.
+	 */
+	public function keep_files( int $attachment_id, array $path_map ): void;
+
+	/**
+	 * Returns the map saved by keep_files(), or an empty array.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return array<string, string>
+	 */
+	public function kept_files( int $attachment_id ): array;
 
 	/**
 	 * Tells other code that an attachment was converted.
@@ -168,7 +218,7 @@ interface Gateway {
 	 * Returns the ID of the next attachment to convert after a given ID, or 0 when there is none.
 	 *
 	 * @param string[] $mimes Source MIME types to include.
-	 * @param string   $scope `retry` for skipped, failed and interrupted images, anything else for images never tried.
+	 * @param string   $scope `retry` for skipped, failed and interrupted images and images whose old files were kept, anything else for images never tried.
 	 * @param int      $after Only attachments with a higher ID are considered.
 	 */
 	public function next_attachment( array $mimes, string $scope, int $after ): int;
@@ -177,7 +227,7 @@ interface Gateway {
 	 * Counts attachments by conversion state.
 	 *
 	 * @param string[] $mimes Source MIME types to include.
-	 * @return array<string, int> Counts for `pending`, `converted`, `skipped`, `failed` and `processing`.
+	 * @return array<string, int> Counts for `pending`, `converted`, `skipped`, `failed`, `processing` and `kept` (converted images whose old files were kept; they are also counted as converted).
 	 */
 	public function count_attachments( array $mimes ): array;
 

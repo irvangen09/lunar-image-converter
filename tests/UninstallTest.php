@@ -52,11 +52,17 @@ final class UninstallTest extends TestCase {
 		$this->assertStringStartsWith( 'lunar_image_converter_', ServerCheck::TRANSIENT );
 	}
 
+	public function test_deletes_the_locks_left_behind_on_every_site(): void {
+		$this->assertSame( 1, substr_count( $this->script, "esc_like( '" . WpGateway::LOCK_PREFIX . "' )" ) );
+		$this->assertLessThan( strpos( $this->script, 'is_multisite()' ), strpos( $this->script, WpGateway::LOCK_PREFIX ), 'The cleanup must be in the per-site function.' );
+		$this->assertStringContainsString( '$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s"', $this->script );
+	}
+
 	public function test_meta_keys_use_the_plugin_prefix(): void {
 		foreach ( WpGateway::META_KEYS as $key ) {
 			$this->assertStringStartsWith( '_lunar_image_converter_', $key );
 		}
 
-		$this->assertCount( 3, array_unique( WpGateway::META_KEYS ) );
+		$this->assertCount( 4, array_unique( WpGateway::META_KEYS ) );
 	}
 }
