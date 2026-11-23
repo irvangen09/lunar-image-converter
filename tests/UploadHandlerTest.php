@@ -22,10 +22,13 @@ final class UploadHandlerTest extends TestCase {
 		$this->gateway = new FakeGateway( sys_get_temp_dir() );
 
 		OptionStub::$options[ Settings::OPTION ] = Settings::DEFAULTS;
+
+		AdminStub::reset();
 	}
 
 	protected function tearDown(): void {
 		OptionStub::$options = array();
+		AdminStub::reset();
 	}
 
 	private function handler(): UploadHandler {
@@ -74,5 +77,35 @@ final class UploadHandlerTest extends TestCase {
 
 		$this->assertSame( $metadata, $this->handler()->convert( $metadata, 'abc' ) );
 		$this->assertSame( array(), $this->gateway->records );
+	}
+
+	public function test_the_hooks_run_the_conversion_after_the_sizes_exist(): void {
+		$this->handler()->register();
+
+		$this->assertContains( 'filter:wp_generate_attachment_metadata:convert:20', AdminStub::$hooks );
+		$this->assertContains( 'filter:wp_client_side_media_processing_enabled:keep_server_processing:99', AdminStub::$hooks );
+	}
+
+	public function test_processing_in_the_browser_is_turned_off_while_a_type_is_converted(): void {
+		$cases = array(
+			'both types'   => array( true, true, false ),
+			'jpeg only'    => array( true, false, false ),
+			'png only'     => array( false, true, false ),
+			'neither type' => array( false, false, true ),
+		);
+
+		foreach ( $cases as $label => $case ) {
+			OptionStub::$options[ Settings::OPTION ] = array_merge(
+				Settings::DEFAULTS,
+				array(
+					'convert_jpeg' => $case[0],
+					'convert_png'  => $case[1],
+				)
+			);
+
+			$this->assertSame( $case[2], $this->handler()->keep_server_processing( true ), $label . ' with processing on' );
+		}
+
+		$this->assertSame( false, $this->handler()->keep_server_processing( false ), 'neither type leaves the value as it was' );
 	}
 }

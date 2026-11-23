@@ -44,10 +44,14 @@ final class BulkControllerTest extends TestCase {
 
 		$this->gateway = new FakeGateway( $this->base );
 		$this->values  = Settings::DEFAULTS;
+
+		AdminStub::reset();
 	}
 
 	protected function tearDown(): void {
 		OptionStub::$options = array();
+		AdminStub::reset();
+		$_POST = array();
 
 		$items = new \RecursiveIteratorIterator(
 			new \RecursiveDirectoryIterator( $this->base, \FilesystemIterator::SKIP_DOTS ),
@@ -452,5 +456,80 @@ final class BulkControllerTest extends TestCase {
 		$settings = new Settings();
 
 		return new BulkController( $settings, new Pipeline( $converter, $this->gateway, $environment ), $this->gateway, $environment, new AltText( $settings, $this->gateway ) );
+	}
+
+	/**
+	 * Runs a request handler and returns how it ended.
+	 *
+	 * @param callable $handler Handler to run.
+	 */
+	private function answer( callable $handler ): AjaxEnded {
+		$ended = null;
+
+		try {
+			$handler();
+		} catch ( AjaxEnded $caught ) {
+			$ended = $caught;
+		}
+
+		$this->assertTrue( $ended instanceof AjaxEnded, 'The handler did not answer.' );
+
+		return $ended;
+	}
+
+	public function test_the_ajax_actions_exist_for_logged_in_users_only(): void {
+		$this->controller()->register();
+
+		$this->assertContains( 'action:wp_ajax_lunar_image_converter_bulk_count:handle_count:10', AdminStub::$hooks );
+		$this->assertContains( 'action:wp_ajax_lunar_image_converter_bulk_process:handle_process:10', AdminStub::$hooks );
+
+		foreach ( AdminStub::$hooks as $hook ) {
+			$this->assertStringNotContainsString( 'nopriv', $hook );
+		}
+	}
+
+	public function test_a_request_without_a_valid_nonce_is_refused_before_an_image_is_touched(): void {
+		$this->add( 3, 'photo.jpg' );
+		AdminStub::$ajax_nonce_ok = false;
+		$controller               = $this->controller();
+
+		foreach ( array( 'handle_count', 'handle_process' ) as $handler ) {
+			$ended = $this->answer( array( $controller, $handler ) );
+
+			$this->assertFalse( $ended->success, $handler );
+		}
+
+		$this->assertSame( array(), $this->gateway->records );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+	}
+
+	public function test_a_user_without_the_capability_is_refused_before_an_image_is_touched(): void {
+		$this->add( 3, 'photo.jpg' );
+		AdminStub::$can_edit = false;
+		$controller          = $this->controller();
+
+		foreach ( array( 'handle_count', 'handle_process' ) as $handler ) {
+			$ended = $this->answer( array( $controller, $handler ) );
+
+			$this->assertFalse( $ended->success, $handler );
+			$this->assertSame( 403, $ended->status, $handler );
+		}
+
+		$this->assertSame( array(), $this->gateway->records );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+	}
+
+	public function test_an_administrator_with_a_valid_nonce_gets_the_result_of_the_next_image(): void {
+		$this->add( 3, 'photo.jpg' );
+		$_POST = array(
+			'scope' => 'new',
+			'after' => '0',
+		);
+
+		$ended = $this->answer( array( $this->controller(), 'handle_process' ) );
+
+		$this->assertTrue( $ended->success );
+		$this->assertSame( 3, $ended->payload['id'] );
+		$this->assertSame( 'converted', $ended->payload['status'] );
 	}
 }

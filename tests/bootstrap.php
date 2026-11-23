@@ -23,4 +23,6 @@ require_once __DIR__ . '/FakeGateway.php';
 require_once __DIR__ . '/OptionStub.php';
 require_once __DIR__ . '/option-functions.php';
 require_once __DIR__ . '/AdminStub.php';
+require_once __DIR__ . '/AjaxEnded.php';
 require_once __DIR__ . '/admin-functions.php';
+require_once __DIR__ . '/conversion-functions.php';

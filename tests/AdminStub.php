@@ -54,17 +54,23 @@ final class AdminStub {
 	public static string $valid_nonce = 'good-nonce';
 
 	/**
+	 * Whether the nonce of an AJAX request is accepted.
+	 */
+	public static bool $ajax_nonce_ok = true;
+
+	/**
 	 * Resets the state before a test.
 	 */
 	public static function reset(): void {
-		self::$user_id     = 1;
-		self::$blog_id     = 1;
-		self::$now         = 0;
-		self::$user_meta   = array();
-		self::$hooks       = array();
-		self::$rest_fields = array();
-		self::$scripts     = array();
-		self::$can_edit    = true;
-		self::$valid_nonce = 'good-nonce';
+		self::$user_id       = 1;
+		self::$blog_id       = 1;
+		self::$now           = 0;
+		self::$user_meta     = array();
+		self::$hooks         = array();
+		self::$rest_fields   = array();
+		self::$scripts       = array();
+		self::$can_edit      = true;
+		self::$valid_nonce   = 'good-nonce';
+		self::$ajax_nonce_ok = true;
 	}
 }
