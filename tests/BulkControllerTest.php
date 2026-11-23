@@ -331,6 +331,101 @@ final class BulkControllerTest extends TestCase {
 		$this->assertFalse( $result['busy'] );
 	}
 
+	/**
+	 * Converts an image while its content cannot be changed, so its old files are kept; the content can be changed afterwards.
+	 */
+	private function kept_image( string $name = 'photo.jpg' ): void {
+		$this->add( 3, $name );
+
+		$this->gateway->replace_succeeds = false;
+
+		$this->controller()->process_next( 'new', 0 );
+
+		$this->gateway->replace_succeeds = true;
+		$this->gateway->metadata[3]      = $this->gateway->saved_metadata[3];
+	}
+
+	public function test_an_image_with_kept_files_is_cleaned_up_in_the_retry_scope(): void {
+		$this->kept_image();
+
+		$this->assertSame( 'old_files_kept', $this->gateway->records[3]['reason'] );
+
+		$result = $this->controller()->process_next( 'retry', 0 );
+
+		$this->assertSame( 3, $result['id'] );
+		$this->assertSame( 'converted', $result['status'] );
+		$this->assertSame( '', $result['reason'] );
+		$this->assertGreaterThan( 0, $result['saved'] );
+		$this->assertFalse( $result['alt'] );
+		$this->assertFileDoesNotExist( $this->dir . '/photo.jpg' );
+		$this->assertFileExists( $this->dir . '/photo.webp' );
+		$this->assertSame( 'photo.webp', $result['name'] );
+	}
+
+	public function test_alt_text_is_not_touched_when_only_the_cleanup_is_finished(): void {
+		$this->values['auto_alt_text'] = true;
+
+		$this->kept_image( 'sunset-beach.jpg' );
+
+		$this->assertSame( 'sunset beach', $this->gateway->alt_texts[3], 'The alt text was filled when the image was converted.' );
+
+		$this->gateway->alt_texts = array();
+
+		$result = $this->controller()->process_next( 'retry', 0 );
+
+		$this->assertFalse( $result['alt'] );
+		$this->assertSame( array(), $this->gateway->alt_texts );
+	}
+
+	public function test_an_image_with_kept_files_is_not_converted_again(): void {
+		$this->kept_image();
+
+		$encoded = count( $this->gateway->saved_metadata );
+
+		$this->controller()->process_next( 'retry', 0 );
+
+		$this->assertCount( $encoded, $this->gateway->saved_metadata );
+		$this->assertSame( array( 'processing', 'converted', 'converted' ), $this->gateway->status_log[3] );
+	}
+
+	public function test_the_new_scope_ignores_an_image_with_kept_files(): void {
+		$this->kept_image();
+
+		$this->assertTrue( $this->controller()->process_next( 'new', 0 )['done'] );
+	}
+
+	public function test_an_image_with_kept_files_is_counted(): void {
+		$this->kept_image();
+
+		$counts = $this->controller()->count();
+
+		$this->assertSame( 1, $counts['kept'] );
+		$this->assertSame( 1, $counts['converted'], 'It is converted, too.' );
+	}
+
+	public function test_an_error_while_cleaning_up_does_not_turn_a_converted_image_into_a_failed_one(): void {
+		$this->kept_image();
+
+		$this->gateway->throwing = array( 'delete' );
+
+		$result = $this->controller()->process_next( 'retry', 0 );
+
+		$this->assertSame( 'converted', $result['status'] );
+		$this->assertSame( 'old_files_kept', $result['reason'] );
+		$this->assertSame( array(), $this->gateway->held );
+	}
+
+	public function test_an_image_with_kept_files_stays_kept_while_the_urls_cannot_be_replaced(): void {
+		$this->kept_image();
+
+		$this->gateway->replace_succeeds = false;
+
+		$result = $this->controller()->process_next( 'retry', 0 );
+
+		$this->assertSame( 'old_files_kept', $result['reason'] );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+	}
+
 	public function test_fills_empty_alt_text_from_the_file_name_when_the_setting_is_on(): void {
 		$this->values['auto_alt_text'] = true;
 
@@ -439,6 +534,7 @@ final class BulkControllerTest extends TestCase {
 				'skipped'    => 1,
 				'failed'     => 1,
 				'processing' => 1,
+				'kept'       => 0,
 			),
 			$this->controller()->count()
 		);

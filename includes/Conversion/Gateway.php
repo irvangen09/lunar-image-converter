@@ -190,6 +190,23 @@ interface Gateway {
 	public function replace_urls( array $path_map ): bool;
 
 	/**
+	 * Remembers which old files of an image were kept, and what replaced them, so the cleanup can be finished
+	 * later. An empty map forgets it.
+	 *
+	 * @param int                   $attachment_id Attachment ID.
+	 * @param array<string, string> $path_map      Old path => new path, both relative to the uploads directory.
+	 */
+	public function keep_files( int $attachment_id, array $path_map ): void;
+
+	/**
+	 * Returns the map saved by keep_files(), or an empty array.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return array<string, string>
+	 */
+	public function kept_files( int $attachment_id ): array;
+
+	/**
 	 * Tells other code that an attachment was converted.
 	 *
 	 * @param int                   $attachment_id Attachment ID.
@@ -201,7 +218,7 @@ interface Gateway {
 	 * Returns the ID of the next attachment to convert after a given ID, or 0 when there is none.
 	 *
 	 * @param string[] $mimes Source MIME types to include.
-	 * @param string   $scope `retry` for skipped, failed and interrupted images, anything else for images never tried.
+	 * @param string   $scope `retry` for skipped, failed and interrupted images and images whose old files were kept, anything else for images never tried.
 	 * @param int      $after Only attachments with a higher ID are considered.
 	 */
 	public function next_attachment( array $mimes, string $scope, int $after ): int;
@@ -210,7 +227,7 @@ interface Gateway {
 	 * Counts attachments by conversion state.
 	 *
 	 * @param string[] $mimes Source MIME types to include.
-	 * @return array<string, int> Counts for `pending`, `converted`, `skipped`, `failed` and `processing`.
+	 * @return array<string, int> Counts for `pending`, `converted`, `skipped`, `failed`, `processing` and `kept` (converted images whose old files were kept; they are also counted as converted).
 	 */
 	public function count_attachments( array $mimes ): array;
 

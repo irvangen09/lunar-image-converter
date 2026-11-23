@@ -114,6 +114,13 @@ final class FakeGateway implements Gateway {
 	public bool $replace_succeeds = true;
 
 	/**
+	 * Maps of kept old files, by attachment ID.
+	 *
+	 * @var array<int, array<string, string>>
+	 */
+	public array $kept = array();
+
+	/**
 	 * Width and height by file name; any other file is 10 x 10.
 	 *
 	 * @var array<string, int[]>
@@ -375,8 +382,27 @@ final class FakeGateway implements Gateway {
 		return $this->replace_succeeds;
 	}
 
+	public function keep_files( int $attachment_id, array $path_map ): void {
+		$this->events[] = 'keep:' . count( $path_map );
+
+		if ( array() === $path_map ) {
+			unset( $this->kept[ $attachment_id ] );
+			return;
+		}
+
+		$this->kept[ $attachment_id ] = $path_map;
+	}
+
+	public function kept_files( int $attachment_id ): array {
+		return $this->kept[ $attachment_id ] ?? array();
+	}
+
 	public function converted( int $attachment_id, array $path_map ): void {
 		$this->announced[ $attachment_id ] = $path_map;
+	}
+
+	private function is_kept( int $attachment_id ): bool {
+		return 'converted' === ( $this->posts[ $attachment_id ]['status'] ?? '' ) && 'old_files_kept' === ( $this->records[ $attachment_id ]['reason'] ?? '' );
 	}
 
 	public function next_attachment( array $mimes, string $scope, int $after ): int {
@@ -387,7 +413,16 @@ final class FakeGateway implements Gateway {
 		foreach ( $ids as $id ) {
 			$status = $this->posts[ $id ]['status'] ?? '';
 
-			if ( $id <= $after || ! in_array( $this->posts[ $id ]['mime'], $mimes, true ) ) {
+			if ( $id <= $after ) {
+				continue;
+			}
+
+			// A converted image has the MIME type of its new file, so images with kept old files are found by status.
+			if ( 'retry' === $scope && $this->is_kept( $id ) ) {
+				return $id;
+			}
+
+			if ( ! in_array( $this->posts[ $id ]['mime'], $mimes, true ) ) {
 				continue;
 			}
 
@@ -406,10 +441,15 @@ final class FakeGateway implements Gateway {
 			'skipped'    => 0,
 			'failed'     => 0,
 			'processing' => 0,
+			'kept'       => 0,
 		);
 
-		foreach ( $this->posts as $post ) {
+		foreach ( $this->posts as $id => $post ) {
 			$status = $post['status'] ?? '';
+
+			if ( $this->is_kept( $id ) ) {
+				++$counts['kept'];
+			}
 
 			if ( 'converted' === $status ) {
 				++$counts['converted'];

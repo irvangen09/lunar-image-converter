@@ -63,6 +63,6 @@ final class UninstallTest extends TestCase {
 			$this->assertStringStartsWith( '_lunar_image_converter_', $key );
 		}
 
-		$this->assertCount( 3, array_unique( WpGateway::META_KEYS ) );
+		$this->assertCount( 4, array_unique( WpGateway::META_KEYS ) );
 	}
 }

@@ -25,6 +25,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 		delete_post_meta_by_key( '_lunar_image_converter_status' );
 		delete_post_meta_by_key( '_lunar_image_converter_reason' );
 		delete_post_meta_by_key( '_lunar_image_converter_saved' );
+		delete_post_meta_by_key( '_lunar_image_converter_kept' );
 	};
 
 	if ( ! is_multisite() ) {

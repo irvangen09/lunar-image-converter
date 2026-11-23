@@ -120,7 +120,7 @@ final class BulkController {
 	 * Returns `done` when there is nothing left, an `error` code when conversion cannot run, and otherwise
 	 * what happened to the image. The ID to continue from is `next`.
 	 *
-	 * @param string $scope `retry` for skipped, failed and interrupted images, anything else for new ones.
+	 * @param string $scope `retry` for skipped, failed and interrupted images and for images whose old files were kept, anything else for new ones.
 	 * @param int    $after Only images with a higher ID are considered.
 	 * @return array<string, mixed>
 	 */
@@ -146,14 +146,17 @@ final class BulkController {
 			);
 		}
 
-		$name       = basename( $this->gateway->relative_path( $id ) );
-		$alt_filled = $this->fill_alt_text( $id, $name );
+		$name = basename( $this->gateway->relative_path( $id ) );
+
+		// An image that was converted but whose old files were kept is only cleaned up; it is not converted again.
+		$resume     = Pipeline::STATUS_CONVERTED === $this->gateway->status( $id );
+		$alt_filled = $resume ? false : $this->fill_alt_text( $id, $name );
 
 		// Another tab or request may be converting this image; it is left to them.
 		$busy = ! $this->take_lock( $id );
 
 		if ( ! $busy ) {
-			$this->convert_locked( $id, $settings );
+			$this->convert_locked( $id, $settings, $resume );
 		}
 
 		return array(
@@ -187,12 +190,20 @@ final class BulkController {
 	 *
 	 * @param int                  $id       Attachment ID.
 	 * @param array<string, mixed> $settings Plugin settings.
+	 * @param bool                 $resume   Whether to finish the cleanup of a converted image instead.
 	 */
-	private function convert_locked( int $id, array $settings ): void {
+	private function convert_locked( int $id, array $settings, bool $resume ): void {
 		try {
-			$this->pipeline->convert( $id, $this->gateway->metadata( $id ), $settings, true );
+			if ( $resume ) {
+				$this->pipeline->resume( $id );
+			} else {
+				$this->pipeline->convert( $id, $this->gateway->metadata( $id ), $settings, true );
+			}
 		} catch ( \Throwable ) {
-			$this->gateway->record( $id, Pipeline::STATUS_FAILED, Pipeline::REASON_ERROR, 0 );
+			// An image that is already converted stays converted, whatever went wrong while cleaning up.
+			if ( ! $resume ) {
+				$this->gateway->record( $id, Pipeline::STATUS_FAILED, Pipeline::REASON_ERROR, 0 );
+			}
 		} finally {
 			try {
 				$this->gateway->unlock( $id );

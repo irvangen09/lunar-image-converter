@@ -23,10 +23,12 @@ final class WpGateway implements Gateway {
 
 	public const META_SAVED = '_lunar_image_converter_saved';
 
+	public const META_KEPT = '_lunar_image_converter_kept';
+
 	/**
 	 * Post meta keys that hold the conversion state of an attachment.
 	 */
-	public const META_KEYS = array( self::META_STATUS, self::META_REASON, self::META_SAVED );
+	public const META_KEYS = array( self::META_STATUS, self::META_REASON, self::META_SAVED, self::META_KEPT );
 
 	/**
 	 * Start of the name of the option row that is the lock of an attachment; the ID follows.
@@ -378,6 +380,46 @@ final class WpGateway implements Gateway {
 	 * @param int                   $attachment_id Attachment ID.
 	 * @param array<string, string> $path_map      Old path => new path.
 	 */
+	public function keep_files( int $attachment_id, array $path_map ): void {
+		if ( array() === $path_map ) {
+			delete_post_meta( $attachment_id, self::META_KEPT );
+			return;
+		}
+
+		// WordPress removes slashes from meta values, so a backslash in a file name needs to be doubled first.
+		update_post_meta( $attachment_id, self::META_KEPT, wp_slash( $path_map ) );
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return array<string, string>
+	 */
+	public function kept_files( int $attachment_id ): array {
+		$map = get_post_meta( $attachment_id, self::META_KEPT, true );
+
+		if ( ! is_array( $map ) ) {
+			return array();
+		}
+
+		$clean = array();
+
+		foreach ( $map as $old => $new ) {
+			if ( is_string( $old ) && is_string( $new ) && '' !== $old && '' !== $new ) {
+				$clean[ $old ] = $new;
+			}
+		}
+
+		return $clean;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * @param int                   $attachment_id Attachment ID.
+	 * @param array<string, string> $path_map      Old path => new path.
+	 */
 	public function converted( int $attachment_id, array $path_map ): void {
 		$uploads = wp_get_upload_dir();
 		$base    = rtrim( (string) $uploads['baseurl'], '/' );
@@ -421,21 +463,22 @@ final class WpGateway implements Gateway {
 		if ( 'retry' === $scope ) {
 			$states  = array( Pipeline::STATUS_SKIPPED, Pipeline::STATUS_FAILED, Pipeline::STATUS_PROCESSING );
 			$holders = implode( ',', array_fill( 0, count( $states ), '%s' ) );
-			$where   = 'm.meta_value IN (' . $holders . ')';
-			$args    = array_merge( $args, $states );
+			// A converted image has the MIME type of its new file, so images whose old files were kept are found by their status.
+			$where = '(m.meta_value IN (' . $holders . ') AND p.post_mime_type IN (' . $mime_holders . ')) OR (m.meta_value = %s AND r.meta_value = %s)';
+			$args  = array_merge( $args, array( self::META_REASON ), $states, $mimes, array( Pipeline::STATUS_CONVERTED, Pipeline::REASON_OLD_FILES_KEPT, $after ) );
 		} else {
-			$where = 'm.meta_id IS NULL';
+			$where = 'm.meta_id IS NULL AND p.post_mime_type IN (' . $mime_holders . ')';
+			$args  = array_merge( $args, array( self::META_REASON ), $mimes, array( $after ) );
 		}
-
-		$args = array_merge( $args, $mimes, array( $after ) );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- The placeholders are built from the number of values; a custom query is the only way to join on a missing meta row.
 		$id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT p.ID FROM {$wpdb->posts} p
 				LEFT JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
+				LEFT JOIN {$wpdb->postmeta} r ON r.post_id = p.ID AND r.meta_key = %s
 				WHERE p.post_type = 'attachment' AND p.post_status <> 'trash'
-				AND {$where} AND p.post_mime_type IN ({$mime_holders}) AND p.ID > %d
+				AND ({$where}) AND p.ID > %d
 				ORDER BY p.ID ASC LIMIT 1",
 				$args
 			)
@@ -460,6 +503,7 @@ final class WpGateway implements Gateway {
 			Pipeline::STATUS_SKIPPED    => 0,
 			Pipeline::STATUS_FAILED     => 0,
 			Pipeline::STATUS_PROCESSING => 0,
+			'kept'                      => 0,
 		);
 
 		$args      = array( self::META_STATUS, Pipeline::STATUS_CONVERTED );
@@ -485,10 +529,25 @@ final class WpGateway implements Gateway {
 		foreach ( (array) $rows as $row ) {
 			$key = '' === $row->state ? 'pending' : $row->state;
 
-			if ( isset( $counts[ $key ] ) ) {
+			if ( isset( $counts[ $key ] ) && 'kept' !== $key ) {
 				$counts[ $key ] = (int) $row->total;
 			}
 		}
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Counting by two meta values needs a custom query.
+		$counts['kept'] = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->posts} p
+				INNER JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s AND m.meta_value = %s
+				INNER JOIN {$wpdb->postmeta} r ON r.post_id = p.ID AND r.meta_key = %s AND r.meta_value = %s
+				WHERE p.post_type = 'attachment' AND p.post_status <> 'trash'",
+				self::META_STATUS,
+				Pipeline::STATUS_CONVERTED,
+				self::META_REASON,
+				Pipeline::REASON_OLD_FILES_KEPT
+			)
+		);
+		// phpcs:enable
 
 		return $counts;
 	}

@@ -345,6 +345,11 @@ final class Pipeline {
 		} catch ( \Throwable ) {
 			// The attachment already points at the new files; an error from here on must not undo that.
 			$this->attempt(
+				function () use ( $attachment_id, $plan, $written ): void {
+					$this->gateway->keep_files( $attachment_id, $this->path_map( $plan['dir_relative'], $written['names'], $plan['main'], $plan['extras'] ) );
+				}
+			);
+			$this->attempt(
 				function () use ( $attachment_id ): void {
 					$this->gateway->record( $attachment_id, self::STATUS_CONVERTED, self::REASON_OLD_FILES_KEPT, 0 );
 				}
@@ -368,7 +373,9 @@ final class Pipeline {
 		$path_map = $this->path_map( $plan['dir_relative'], $written['names'], $plan['main'], $plan['extras'] );
 
 		if ( $in_use ) {
-			// Saved before the content is touched: if the request dies from here on, the old files stay.
+			// Saved before the content is touched: if the request dies from here on, the old files stay, and the
+			// map tells a later run what to clean up.
+			$this->gateway->keep_files( $attachment_id, $path_map );
 			$this->gateway->record( $attachment_id, self::STATUS_CONVERTED, self::REASON_OLD_FILES_KEPT, 0 );
 
 			if ( ! $this->gateway->replace_urls( $path_map ) ) {
@@ -394,10 +401,89 @@ final class Pipeline {
 			$this->gateway->clear_backups( $attachment_id );
 		}
 
+		if ( $in_use ) {
+			$this->gateway->keep_files( $attachment_id, array() );
+		}
+
 		$this->gateway->record( $attachment_id, self::STATUS_CONVERTED, '', $saved );
 		$this->gateway->converted( $attachment_id, $path_map );
 
 		return $new_metadata;
+	}
+
+	/**
+	 * Finishes the cleanup of an image that was converted but whose old files were kept.
+	 *
+	 * Replaces the URLs again; only when that succeeds are the old files deleted and the image recorded as fully
+	 * converted. Otherwise nothing changes and a later run can try again. Does nothing for any other image.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function resume( int $attachment_id ): void {
+		if ( self::STATUS_CONVERTED !== $this->gateway->status( $attachment_id ) || self::REASON_OLD_FILES_KEPT !== $this->gateway->reason( $attachment_id ) ) {
+			return;
+		}
+
+		$path_map = $this->gateway->kept_files( $attachment_id );
+
+		if ( array() === $path_map || ! $this->gateway->replace_urls( $path_map ) ) {
+			return;
+		}
+
+		$base    = $this->gateway->base_dir();
+		$current = $this->current_files( $attachment_id );
+		$old     = array();
+		$new     = array();
+
+		foreach ( $path_map as $from => $to ) {
+			// Never delete a file the attachment uses now.
+			if ( in_array( $from, $current, true ) ) {
+				continue;
+			}
+
+			$old[] = $base . '/' . $from;
+			$new[] = $base . '/' . $to;
+		}
+
+		$saved = max( 0, $this->total_size( $old ) - $this->total_size( array_unique( $new ) ) );
+
+		foreach ( $old as $path ) {
+			$this->gateway->delete( $path );
+		}
+
+		if ( array() !== $this->gateway->backup_files( $attachment_id ) ) {
+			$this->gateway->clear_backups( $attachment_id );
+		}
+
+		$this->gateway->keep_files( $attachment_id, array() );
+		$this->gateway->record( $attachment_id, self::STATUS_CONVERTED, '', $saved );
+		$this->gateway->converted( $attachment_id, $path_map );
+	}
+
+	/**
+	 * Lists the files an attachment uses now, relative to the uploads directory.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 * @return string[]
+	 */
+	private function current_files( int $attachment_id ): array {
+		$main     = $this->gateway->relative_path( $attachment_id );
+		$dir      = dirname( $main );
+		$prefix   = '.' === $dir ? '' : $dir . '/';
+		$metadata = $this->gateway->metadata( $attachment_id );
+		$files    = array( $main );
+
+		foreach ( (array) ( $metadata['sizes'] ?? array() ) as $size ) {
+			if ( is_array( $size ) && ! empty( $size['file'] ) ) {
+				$files[] = $prefix . $size['file'];
+			}
+		}
+
+		if ( ! empty( $metadata['original_image'] ) ) {
+			$files[] = $prefix . $metadata['original_image'];
+		}
+
+		return $files;
 	}
 
 	/**
