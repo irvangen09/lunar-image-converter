@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An unexpected error while converting an upload is now recorded as failed with the reason `error`; before, the upload was left without any status.
 - The copies that the image editor keeps to undo an edit are deleted together with the original files, so "Restore original" is no longer offered for a converted image.
 - Image processing in the browser (WordPress 7.1) is turned off while conversion is on, so the sizes of an upload are made on the server and converted together with the main file.
+- A converted file keeps the name of the file it replaces, for example `photo-scaled.webp` and `photo-150x150.webp`. Before, WordPress added a number (`photo-scaled-1.webp`) to every name that ends in `-scaled`, `-rotated` or a size, even when nothing was in the way. A number is now added only when the name is really taken. Images that were converted earlier are not renamed.
 
 ## [0.1.0] - 2026-11-12
 
