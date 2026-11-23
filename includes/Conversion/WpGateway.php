@@ -203,6 +203,22 @@ final class WpGateway implements Gateway {
 
 	/**
 	 * {@inheritDoc}
+	 */
+	public function is_upload_request(): bool {
+		global $pagenow;
+
+		// The uploader of the media modal and of Media > Add New posts to async-upload.php; the classic form posts to media-new.php.
+		if ( in_array( $pagenow, array( 'async-upload.php', 'media-new.php' ), true ) ) {
+			return true;
+		}
+
+		return wp_doing_ajax()
+			&& isset( $_REQUEST['action'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only reads which request this is; WordPress checks the nonce of the upload itself.
+			&& 'upload-attachment' === sanitize_key( wp_unslash( $_REQUEST['action'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Same.
+	}
+
+	/**
+	 * {@inheritDoc}
 	 *
 	 * @param int                  $attachment_id Attachment ID.
 	 * @param array<string, mixed> $metadata      Metadata.

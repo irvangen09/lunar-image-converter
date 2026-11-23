@@ -15,6 +15,11 @@ final class WpStub {
 	public static string $basedir = '';
 
 	/**
+	 * Whether the request counts as an AJAX request.
+	 */
+	public static bool $ajax = false;
+
+	/**
 	 * Paths wp_delete_file was called with, in order.
 	 *
 	 * @var string[]

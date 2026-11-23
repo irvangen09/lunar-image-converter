@@ -82,7 +82,7 @@ final class Plugin {
 		return new self(
 			$settings,
 			new SettingsPage( $settings, $environment, new BulkPanel( $settings, $environment ), $check ),
-			new UploadHandler( $settings, $pipeline ),
+			new UploadHandler( $settings, $pipeline, $gateway ),
 			new BulkController( $settings, $pipeline, $gateway, $environment, $alt_text ),
 			$alt_text,
 			$status,

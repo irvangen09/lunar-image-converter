@@ -127,6 +127,11 @@ final class FakeGateway implements Gateway {
 	 */
 	public array $throwing = array();
 
+	/**
+	 * Whether the request counts as a browser upload.
+	 */
+	public bool $upload_request = true;
+
 	public bool $switch_succeeds = true;
 
 	public bool $save_succeeds = true;
@@ -243,6 +248,10 @@ final class FakeGateway implements Gateway {
 
 	public function seconds_left(): float {
 		return array() === $this->seconds_queue ? $this->seconds_left : array_shift( $this->seconds_queue );
+	}
+
+	public function is_upload_request(): bool {
+		return $this->upload_request;
 	}
 
 	public function switch_to( int $attachment_id, string $path, string $mime ): bool {

@@ -94,6 +94,14 @@ interface Gateway {
 	public function seconds_left(): float;
 
 	/**
+	 * Tells whether the request is a browser upload of the media library: the upload of the media modal, the
+	 * uploader of the Add New page or its classic form.
+	 *
+	 * Other requests that generate image sizes, such as regenerating thumbnails or importing a site, are not.
+	 */
+	public function is_upload_request(): bool;
+
+	/**
 	 * Points an attachment at a new main file and MIME type.
 	 *
 	 * @param int    $attachment_id Attachment ID.

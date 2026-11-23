@@ -38,3 +38,33 @@ function wp_delete_file( string $path ): void {
 		unlink( $path );
 	}
 }
+
+/**
+ * @param string   $name     Hook name.
+ * @param callable $callback Callback.
+ * @param int      $priority Priority.
+ */
+function add_action( string $name, $callback, int $priority = 10 ): bool {
+	AdminStub::$hooks[] = 'action:' . $name . ':' . $callback[1] . ':' . $priority;
+
+	return true;
+}
+
+function wp_doing_ajax(): bool {
+	return WpStub::$ajax;
+}
+
+/**
+ * @param mixed $value Value.
+ * @return mixed
+ */
+function wp_unslash( $value ) {
+	return $value;
+}
+
+/**
+ * @param string $key Key.
+ */
+function sanitize_key( string $key ): string {
+	return preg_replace( '/[^a-z0-9_\\-]/', '', strtolower( $key ) );
+}
