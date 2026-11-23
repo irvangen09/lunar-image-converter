@@ -73,11 +73,11 @@ wp i18n make-mo languages
 
 Check that `Report-Msgid-Bugs-To` in the `.pot` header is still `https://github.com/irvangen09/lunar-image-converter/issues`; WP-CLI otherwise writes a WordPress.org address.
 
-To add a language, copy the `.pot` to `languages/lunar-image-converter-<locale>.po` (for example `de_DE`), translate it, set the `Language` header, and run `wp i18n make-mo languages`. The tests check that the template has every string the code uses, that a `.po` file has no empty translation and keeps the placeholders (`%s`, `%1$d`) of the original,, and that the `.mo` matches the `.po`. They pick up a new language file by themselves.
+To add a language, copy the `.pot` to `languages/lunar-image-converter-<locale>.po` (for example `de_DE`), translate it, set the `Language` header, and run `wp i18n make-mo languages`. The tests check that the template has every string the code uses, that a `.po` file has no empty translation and keeps the placeholders (`%s`, `%1$d`) of the original, and that the `.mo` matches the `.po`. They pick up a new language file by themselves.
 
 ## What stays stable
 
-After the first public release these will not change without a major version: the option `lunar_image_converter_settings` and its keys, the hidden post meta keys and status and reason values, the action `lunar_image_converter_converted`, the filter `lunar_image_converter_max_megapixels`, and the AJAX action and scope names used by the bulk converter. Please keep them in mind when you propose a change.
+After the first public release these will not change without a major version: the option `lunar_image_converter_settings` and its keys, the hidden post meta keys and status and reason values, the action `lunar_image_converter_converted`, the filter `lunar_image_converter_max_megapixels`, and the AJAX action and scope names used by the bulk converter. The hidden post meta keys include the one that remembers the old files of an image whose cleanup is not finished. Please keep them in mind when you propose a change.
 
 ## License
 
