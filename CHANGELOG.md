@@ -40,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Image processing in the browser (WordPress 7.1) is turned off while conversion is on, so the sizes of an upload are made on the server and converted together with the main file.
 - A converted file keeps the name of the file it replaces, for example `photo-scaled.webp` and `photo-150x150.webp`. Before, WordPress added a number (`photo-scaled-1.webp`) to every name that ends in `-scaled`, `-rotated` or a size, even when nothing was in the way. A number is now added only when the name is really taken. Images that were converted earlier are not renamed.
 
+### Fixed
+
+- The *Quality* setting is now applied. When a JPEG or PNG is saved as WebP or AVIF, WordPress set the quality again to its own default of the new format (86 for WebP) and dropped the saved value, so every conversion came out at the same quality and size whatever the setting. The saved quality now reaches the encoder, for the main file and every size.
+
 ## [0.1.0] - 2026-11-12
 
 ### Added

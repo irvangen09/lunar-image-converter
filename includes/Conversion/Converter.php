@@ -30,11 +30,23 @@ final class Converter {
 				return false;
 			}
 
-			if ( is_wp_error( $editor->set_quality( $quality ) ) ) {
-				return false;
-			}
+			// When the file is saved in another format than it was read, WordPress sets the quality again to the
+			// default of the new format and drops what was set before. The filter has priority over that default.
+			$pin = static function () use ( $quality ): int {
+				return $quality;
+			};
 
-			return ! is_wp_error( $editor->save( $destination, $mime ) );
+			add_filter( 'wp_editor_set_quality', $pin, 99 );
+
+			try {
+				if ( is_wp_error( $editor->set_quality( $quality ) ) ) {
+					return false;
+				}
+
+				return ! is_wp_error( $editor->save( $destination, $mime ) );
+			} finally {
+				remove_filter( 'wp_editor_set_quality', $pin, 99 );
+			}
 		};
 	}
 
