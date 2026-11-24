@@ -21,6 +21,9 @@ final class ConverterTest extends TestCase {
 	}
 
 	protected function tearDown(): void {
+		WpStub::$filters = array();
+		WpStub::$editor  = false;
+
 		foreach ( (array) glob( $this->dir . '/*' ) as $file ) {
 			unlink( $file );
 		}
@@ -92,6 +95,40 @@ final class ConverterTest extends TestCase {
 		);
 
 		$this->assertFalse( $converter->encode( $this->dir . '/source.jpg', $this->dir . '/empty.webp', 'image/webp', 80 ) );
+	}
+
+	public function test_the_saved_quality_reaches_the_file_when_wordpress_resets_it_while_saving(): void {
+		$editor         = new FakeImageEditor();
+		WpStub::$editor = $editor;
+
+		$this->assertTrue( ( new Converter() )->encode( $this->dir . '/source.jpg', $this->dir . '/out.webp', 'image/webp', 50 ) );
+		$this->assertSame( 50, $editor->written_with );
+
+		( new Converter() )->encode( $this->dir . '/source.jpg', $this->dir . '/other.webp', 'image/webp', 95 );
+		$this->assertSame( 95, $editor->written_with );
+	}
+
+	public function test_the_quality_filter_does_not_stay_behind(): void {
+		WpStub::$editor = new FakeImageEditor();
+
+		( new Converter() )->encode( $this->dir . '/source.jpg', $this->dir . '/out.webp', 'image/webp', 50 );
+
+		$this->assertSame( array(), array_values( WpStub::$filters['wp_editor_set_quality'] ?? array() ) );
+	}
+
+	public function test_the_quality_filter_does_not_stay_behind_when_saving_throws(): void {
+		$editor         = new FakeImageEditor();
+		$editor->throws = true;
+		WpStub::$editor = $editor;
+
+		try {
+			( new Converter() )->encode( $this->dir . '/source.jpg', $this->dir . '/out.webp', 'image/webp', 50 );
+			$this->fail( 'The exception was swallowed.' );
+		} catch ( \RuntimeException $e ) {
+			$this->assertSame( 'The encoder crashed.', $e->getMessage() );
+		}
+
+		$this->assertSame( array(), array_values( WpStub::$filters['wp_editor_set_quality'] ?? array() ) );
 	}
 
 	public function test_writes_a_real_webp_through_gd_when_available(): void {

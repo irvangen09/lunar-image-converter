@@ -16,9 +16,53 @@ use LunarImageConverter\Tests\WpStub;
  * @param int      $priority Priority.
  */
 function add_filter( string $name, $callback, int $priority = 10 ): bool {
-	AdminStub::$hooks[] = 'filter:' . $name . ':' . $callback[1] . ':' . $priority;
+	AdminStub::$hooks[]         = 'filter:' . $name . ':' . ( is_array( $callback ) ? $callback[1] : 'closure' ) . ':' . $priority;
+	WpStub::$filters[ $name ][] = $callback;
 
 	return true;
+}
+
+/**
+ * @param string   $name     Hook name.
+ * @param callable $callback Callback.
+ */
+function remove_filter( string $name, $callback ): bool {
+	$index = array_search( $callback, WpStub::$filters[ $name ] ?? array(), true );
+
+	if ( false === $index ) {
+		return false;
+	}
+
+	unset( WpStub::$filters[ $name ][ $index ] );
+
+	return true;
+}
+
+/**
+ * @param string $name  Hook name.
+ * @param mixed  $value Value.
+ * @return mixed
+ */
+function apply_filters( string $name, $value ) {
+	return WpStub::apply_filters( $name, $value );
+}
+
+/**
+ * @param string               $source Path of the image.
+ * @param array<string, mixed> $args   Editor arguments.
+ * @return object|false
+ */
+function wp_get_image_editor( string $source, array $args = array() ) {
+	unset( $source, $args );
+
+	return WpStub::$editor;
+}
+
+/**
+ * @param mixed $thing Value.
+ */
+function is_wp_error( $thing ): bool {
+	return $thing instanceof \WP_Error;
 }
 
 /**
