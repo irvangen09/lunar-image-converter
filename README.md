@@ -151,6 +151,16 @@ add_action( 'lunar_image_converter_converted', function ( int $attachment_id, ar
 
 Use it to purge a cache or a CDN. A listener that throws an exception is ignored, so it cannot undo a finished conversion. The plugin does not purge any cache itself, because every caching plugin does it differently.
 
+For LiteSpeed Cache, press *Purge All* (Toolbox) once after a run of *Convert existing images*. To purge after every converted image instead, use its public action. This empties the whole cache each time, so it is slow during a long run:
+
+```php
+add_action( 'lunar_image_converter_converted', static function () {
+	do_action( 'litespeed_purge_all' );
+} );
+```
+
+LiteSpeed Cache's own image optimization only rewrites addresses that end in `.jpg`, `.jpeg`, `.png` or `.gif`, and only when it has made a `.webp` or `.avif` copy of that file. Files that this plugin made end in `.webp` or `.avif`, so it should leave them alone. That comes from reading its code; it was not tested here. Do not run both for the same images.
+
 **Filter `lunar_image_converter_max_megapixels`** changes the largest image that is converted.
 
 ```php
@@ -171,8 +181,8 @@ Deleting the plugin removes its settings, the hidden status meta, the saved uplo
 
 - Automated tests cover the conversion logic, content replacement, the bulk controller, alt text and the quality setting, and run in GitHub Actions on PHP 8.1 and 8.4.
 - The plugin was run against a real WordPress 7.1.4 in a development environment: upload and bulk conversion, scaled images, edited images, content replacement, alt text, and the settings page in a browser.
-- The maintainer also tested it by hand on a real WordPress site on a hosting account, with a few hundred images: conversion on upload, regenerating thumbnails (nothing is converted), *Convert existing images* with progress, stop and resume, two tabs running at once, file names without added numbers, the Quality setting with WebP and AVIF, and AVIF with the delivery check on the settings page.
-- Not tested yet: AVIF for images above the size limit and the speed of AVIF on a large library, the Indonesian translation in a browser, uploads from Chrome with WordPress 7.1's in-browser processing, LiteSpeed Cache, multisite, importing a site, and the speed of content replacement on very large sites. The bulk page was checked in a browser with a test server, not yet with screen readers.
+- The maintainer also tested it by hand on a real WordPress site on a hosting account, with a few hundred images: conversion on upload, regenerating thumbnails (nothing is converted), *Convert existing images* with progress, stop and resume, two tabs running at once, file names without added numbers, the Quality setting with WebP and AVIF, AVIF with the delivery check on the settings page, and the Indonesian settings page and media library column.
+- Not tested yet: AVIF for images above the size limit and the speed of AVIF on a large library, the Indonesian translation of the bulk page and the upload warnings, uploads from Chrome with WordPress 7.1's in-browser processing, the page cache of LiteSpeed Cache with this plugin (its image optimization is described under *For developers*), multisite, importing a site, and the speed of content replacement on very large sites. The bulk page was checked in a browser with a test server, not yet with screen readers.
 
 ## Contributing and security
 
