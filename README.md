@@ -53,7 +53,7 @@ Under **Media > Image Converter** (administrators only):
 | Setting | Default | Notes |
 |---|---|---|
 | Output format | WebP | AVIF is optional and slower to encode. |
-| Quality | 80 | 1 to 100. Higher means better quality and larger files. |
+| Quality | 80 | 1 to 100. Higher means better quality and larger files. One number is used for the format you chose. Both formats are lossy, but the same number does not give the same look or size in WebP and AVIF: at the same number AVIF can come out larger than WebP. Compare a few of your own images before you pick a number. |
 | Image types | JPEG and PNG on | Each can be turned off. GIF and other types are never converted. |
 | Fill empty alt text from the file name | Off | See [Alt text](#alt-text). |
 
@@ -105,6 +105,8 @@ Then clear every cache between your server and the visitor: your caching plugin 
   - the server cannot encode the format, or WordPress does not allow that file type;
   - the converted file is not a valid image of the same size as the original, or a file lies outside the uploads folder.
 - All sizes of an image are converted together. If one file fails, none is replaced.
+- A converted file keeps the name of the file it replaces (`photo-scaled.jpg` becomes `photo-scaled.webp`, `photo-150x150.jpg` becomes `photo-150x150.webp`). A number is added only when that name is already taken, and an existing file is never overwritten.
+- The Quality setting is applied to every file of an image, the main file and each size.
 - Each image gets a status (converted, skipped or failed) and a reason, stored in hidden post meta. Only converted images are never converted again; skipped and failed ones can be tried again.
 - **You can see what happened to each image.** In the media library, the list view has an *Image Converter* column, the attachment details and the edit screen show the status, and an image that should have been converted but was not shows why (for example, "Skipped (this server cannot encode the chosen format)"). An image that is only not smaller than the original is shown in the same way, but is not reported again.
 - **You are told when an upload was not converted.** The next admin page you open shows a notice that lists the uploaded images that were not converted and why. It works for every way of uploading, because the server remembers the result for the user who uploaded. It does not appear for images that are simply not smaller as WebP or AVIF, and it is shown once.
@@ -167,9 +169,10 @@ Deleting the plugin removes its settings, the hidden status meta, the saved uplo
 
 ## Status and testing
 
-- Automated tests cover the conversion logic, content replacement, the bulk controller and alt text, and run in GitHub Actions on PHP 8.1 and 8.4.
-- The plugin was also run against a real WordPress 7.1.4 in a development environment: upload and bulk conversion, scaled images, edited images, content replacement, alt text, and the settings page in a browser.
-- Not tested yet: uploads from Chrome with WordPress 7.1's in-browser processing, AVIF on a production server, LiteSpeed Cache, multisite, the lock and the content search on a real MySQL database, importing a site, regenerating thumbnails, and the speed of content replacement on very large sites. The bulk page was checked in a browser with a test server, not yet with screen readers.
+- Automated tests cover the conversion logic, content replacement, the bulk controller, alt text and the quality setting, and run in GitHub Actions on PHP 8.1 and 8.4.
+- The plugin was run against a real WordPress 7.1.4 in a development environment: upload and bulk conversion, scaled images, edited images, content replacement, alt text, and the settings page in a browser.
+- The maintainer also tested it by hand on a real WordPress site on a hosting account, with a few hundred images: conversion on upload, regenerating thumbnails (nothing is converted), *Convert existing images* with progress, stop and resume, two tabs running at once, file names without added numbers, the Quality setting with WebP and AVIF, and AVIF with the delivery check on the settings page.
+- Not tested yet: AVIF for images above the size limit and the speed of AVIF on a large library, the Indonesian translation in a browser, uploads from Chrome with WordPress 7.1's in-browser processing, LiteSpeed Cache, multisite, importing a site, and the speed of content replacement on very large sites. The bulk page was checked in a browser with a test server, not yet with screen readers.
 
 ## Contributing and security
 
