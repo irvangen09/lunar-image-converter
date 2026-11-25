@@ -2,7 +2,7 @@
 
 A WordPress plugin that converts JPEG and PNG images to WebP or AVIF, replaces the originals, and updates the image addresses in your content.
 
-> **Status: in development (0.1.0), not released yet.** It is built for one site and published openly on GitHub. It is not on WordPress.org and no user support is promised. See [Status and testing](#status-and-testing).
+> **Status: 1.0.0, the first public release.** It is built for one site and published openly on GitHub. It is not on WordPress.org and no user support is promised. See [Status and testing](#status-and-testing).
 
 ## What it does
 
@@ -35,7 +35,7 @@ The attachment ID never changes, so featured images, galleries and anything else
 
 ## Installation
 
-There is no release yet. Until the first one is published on the [GitHub Releases](https://github.com/irvangen09/lunar-image-converter/releases) page, build the zip yourself (it needs Node.js and npm):
+Download `lunar-image-converter.zip` from the [GitHub Releases](https://github.com/irvangen09/lunar-image-converter/releases) page. To build the zip yourself instead (it needs Node.js and npm):
 
 ```
 npm ci

@@ -77,7 +77,7 @@ To add a language, copy the `.pot` to `languages/lunar-image-converter-<locale>.
 
 ## What stays stable
 
-After the first public release these will not change without a major version: the option `lunar_image_converter_settings` and its keys, the hidden post meta keys and status and reason values, the action `lunar_image_converter_converted`, the filter `lunar_image_converter_max_megapixels`, and the AJAX action and scope names used by the bulk converter. The hidden post meta keys include the one that remembers the old files of an image whose cleanup is not finished. Please keep them in mind when you propose a change.
+From version 1.0.0 these will not change without a major version: the option `lunar_image_converter_settings` and its keys, the hidden post meta keys and status and reason values, the action `lunar_image_converter_converted`, the filter `lunar_image_converter_max_megapixels`, and the AJAX action and scope names used by the bulk converter. The hidden post meta keys include the one that remembers the old files of an image whose cleanup is not finished. Please keep them in mind when you propose a change.
 
 ## License
 

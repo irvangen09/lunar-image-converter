@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The plugin has not had a public release yet. Once it does, only the latest release receives security fixes.
+Only the latest release receives security fixes.
 
 ## Reporting a vulnerability
 
