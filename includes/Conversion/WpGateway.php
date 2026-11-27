@@ -474,8 +474,10 @@ final class WpGateway implements Gateway {
 			$states  = array( Pipeline::STATUS_SKIPPED, Pipeline::STATUS_FAILED, Pipeline::STATUS_PROCESSING );
 			$holders = implode( ',', array_fill( 0, count( $states ), '%s' ) );
 			// A converted image has the MIME type of its new file, so images whose old files were kept are found by their status.
-			$where = '(m.meta_value IN (' . $holders . ') AND p.post_mime_type IN (' . $mime_holders . ')) OR (m.meta_value = %s AND r.meta_value = %s)';
-			$args  = array_merge( $args, array( self::META_REASON ), $states, $mimes, array( Pipeline::STATUS_CONVERTED, Pipeline::REASON_OLD_FILES_KEPT, $after ) );
+			$targets = implode( ',', array_fill( 0, count( Pipeline::TARGET_MIMES ), '%s' ) );
+			// An image whose run died right after the switch is still `processing` but already has the new MIME type.
+			$where = '(m.meta_value IN (' . $holders . ') AND p.post_mime_type IN (' . $mime_holders . ')) OR (m.meta_value = %s AND r.meta_value = %s) OR (m.meta_value = %s AND p.post_mime_type IN (' . $targets . '))';
+			$args  = array_merge( $args, array( self::META_REASON ), $states, $mimes, array( Pipeline::STATUS_CONVERTED, Pipeline::REASON_OLD_FILES_KEPT, Pipeline::STATUS_PROCESSING ), Pipeline::TARGET_MIMES, array( $after ) );
 		} else {
 			$where = 'm.meta_id IS NULL AND p.post_mime_type IN (' . $mime_holders . ')';
 			$args  = array_merge( $args, array( self::META_REASON ), $mimes, array( $after ) );
@@ -523,6 +525,10 @@ final class WpGateway implements Gateway {
 			$condition .= ' OR p.post_mime_type IN (' . implode( ',', array_fill( 0, count( $mimes ), '%s' ) ) . ')';
 			$args       = array_merge( $args, $mimes );
 		}
+
+		// An image whose run died right after the switch is still `processing` but already has the new MIME type.
+		$condition .= ' OR (m.meta_value = %s AND p.post_mime_type IN (' . implode( ',', array_fill( 0, count( Pipeline::TARGET_MIMES ), '%s' ) ) . '))';
+		$args       = array_merge( $args, array( Pipeline::STATUS_PROCESSING ), Pipeline::TARGET_MIMES );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- The placeholders are built from the number of values; grouping by a meta value needs a custom query.
 		$rows = $wpdb->get_results(

@@ -37,9 +37,13 @@ interface ContentStore {
 	/**
 	 * Saves new content for a post without touching its modified date and without making a revision.
 	 *
+	 * The content is saved only while the post still holds the text it was read with, so a change someone saved
+	 * in the meantime is never overwritten.
+	 *
 	 * @param int    $id      Post ID.
+	 * @param string $old     Content the new content was made from.
 	 * @param string $content New content.
-	 * @return bool Whether the content was saved.
+	 * @return bool Whether the content was saved; false also when the post changed since it was read.
 	 */
-	public function update( int $id, string $content ): bool;
+	public function update( int $id, string $old, string $content ): bool;
 }

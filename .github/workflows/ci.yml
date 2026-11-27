@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
 
 permissions:
@@ -65,3 +66,19 @@ jobs:
       - run: composer install --no-interaction --no-progress
 
       - run: composer test
+
+  release-tag:
+    name: Release tag
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare the tag with the plugin version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          header="$(sed -n 's/^ \* Version:[[:space:]]*//p' lunar-image-converter.php | head -n 1 | tr -d '[:space:]')"
+          constant="$(sed -n "s/^define( 'LUNAR_IMAGE_CONVERTER_VERSION', '\(.*\)' );.*/\1/p" lunar-image-converter.php | tr -d '[:space:]')"
+          package="$(node -p "require('./package.json').version")"
+          echo "tag=$tag header=$header constant=$constant package=$package"
+          test -n "$tag" && test "$tag" = "$header" && test "$tag" = "$constant" && test "$tag" = "$package"

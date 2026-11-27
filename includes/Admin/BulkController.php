@@ -149,7 +149,8 @@ final class BulkController {
 		$name = basename( $this->gateway->relative_path( $id ) );
 
 		// An image that was converted but whose old files were kept is only cleaned up; it is not converted again.
-		$resume     = Pipeline::STATUS_CONVERTED === $this->gateway->status( $id );
+		// So is one whose run died right after it was switched to the new files.
+		$resume     = Pipeline::STATUS_CONVERTED === $this->gateway->status( $id ) || $this->pipeline->was_switched( $id );
 		$alt_filled = $resume ? false : $this->fill_alt_text( $id, $name );
 
 		// Another tab or request may be converting this image; it is left to them.

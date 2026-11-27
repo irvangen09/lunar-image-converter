@@ -388,6 +388,40 @@ final class BulkControllerTest extends TestCase {
 		$this->assertSame( array( 'processing', 'converted', 'converted' ), $this->gateway->status_log[3] );
 	}
 
+	public function test_an_image_whose_run_died_right_after_the_switch_is_finished_in_the_retry_scope(): void {
+		$this->kept_image();
+		$this->gateway->record( 3, 'processing', '', 0 );
+
+		$encoded = count( $this->gateway->saved_metadata );
+
+		$result = $this->controller()->process_next( 'retry', 0 );
+
+		$this->assertSame( 3, $result['id'] );
+		$this->assertSame( 'converted', $result['status'] );
+		$this->assertSame( '', $result['reason'] );
+		$this->assertFalse( $result['alt'] );
+		$this->assertCount( $encoded, $this->gateway->saved_metadata, 'It is not converted again.' );
+		$this->assertFileDoesNotExist( $this->dir . '/photo.jpg' );
+		$this->assertFileExists( $this->dir . '/photo.webp' );
+	}
+
+	public function test_an_image_whose_run_died_right_after_the_switch_is_counted_as_interrupted(): void {
+		$this->kept_image();
+		$this->gateway->record( 3, 'processing', '', 0 );
+
+		$counts = $this->controller()->count();
+
+		$this->assertSame( 1, $counts['processing'] );
+		$this->assertSame( 0, $counts['converted'] );
+	}
+
+	public function test_the_new_scope_ignores_an_image_whose_run_died_right_after_the_switch(): void {
+		$this->kept_image();
+		$this->gateway->record( 3, 'processing', '', 0 );
+
+		$this->assertTrue( $this->controller()->process_next( 'new', 0 )['done'] );
+	}
+
 	public function test_the_new_scope_ignores_an_image_with_kept_files(): void {
 		$this->kept_image();
 

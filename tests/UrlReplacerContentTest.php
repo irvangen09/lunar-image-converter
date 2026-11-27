@@ -111,6 +111,32 @@ final class UrlReplacerContentTest extends TestCase {
 		$this->assertFalse( $this->replace() );
 	}
 
+	public function test_a_post_saved_by_someone_else_in_the_meantime_is_never_overwritten(): void {
+		$this->store->posts  = array(
+			3 => array(
+				'type'    => 'post',
+				'content' => '<img src="' . $this->url( 'photo.jpg' ) . '">',
+			),
+		);
+		$this->store->edited = array( 3 => '<img src="' . $this->url( 'photo.jpg' ) . '"> The editor added this.' );
+
+		$this->assertFalse( $this->replace() );
+		$this->assertSame( '<img src="' . $this->url( 'photo.jpg' ) . '"> The editor added this.', $this->store->posts[3]['content'] );
+		$this->assertSame( array(), $this->store->saved );
+	}
+
+	public function test_a_post_that_did_not_change_is_saved_with_the_new_address(): void {
+		$this->store->posts = array(
+			3 => array(
+				'type'    => 'post',
+				'content' => '<img src="' . $this->url( 'photo.jpg' ) . '">',
+			),
+		);
+
+		$this->assertTrue( $this->replace() );
+		$this->assertSame( array( 3 ), $this->store->saved );
+	}
+
 	public function test_content_that_cannot_be_read_is_never_written_empty(): void {
 		$this->store->posts = array(
 			3 => array(

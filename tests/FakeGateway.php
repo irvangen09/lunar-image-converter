@@ -8,6 +8,7 @@
 namespace LunarImageConverter\Tests;
 
 use LunarImageConverter\Conversion\Gateway;
+use LunarImageConverter\Conversion\Pipeline;
 
 final class FakeGateway implements Gateway {
 
@@ -422,6 +423,11 @@ final class FakeGateway implements Gateway {
 				return $id;
 			}
 
+			// A run that died right after the switch leaves `processing` on an image with the new MIME type.
+			if ( 'retry' === $scope && 'processing' === $status && in_array( $this->posts[ $id ]['mime'], Pipeline::TARGET_MIMES, true ) ) {
+				return $id;
+			}
+
 			if ( ! in_array( $this->posts[ $id ]['mime'], $mimes, true ) ) {
 				continue;
 			}
@@ -455,6 +461,8 @@ final class FakeGateway implements Gateway {
 				++$counts['converted'];
 			} elseif ( in_array( $post['mime'], $mimes, true ) ) {
 				++$counts[ '' === $status ? 'pending' : $status ];
+			} elseif ( 'processing' === $status && in_array( $post['mime'], Pipeline::TARGET_MIMES, true ) ) {
+				++$counts['processing'];
 			}
 		}
 

@@ -171,7 +171,7 @@ add_filter( 'lunar_image_converter_max_megapixels', function ( float $limit, str
 
 The built-in limits are 25 (WebP) and 8 (AVIF).
 
-The option name, the post meta keys, these two hooks, the AJAX actions and the status values will not change after the first public release. The rows that lock an image while it is converted are internal and may change.
+The option name, the post meta keys, the status and reason values, the saved-notice user meta key, the REST field `lunar_image_converter` on attachments, these two hooks and the AJAX action and scope names will not change after the first public release. The rows that lock an image while it is converted and the saved server test results are internal and may change.
 
 ## Removing the plugin
 

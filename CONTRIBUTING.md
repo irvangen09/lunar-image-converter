@@ -77,7 +77,17 @@ To add a language, copy the `.pot` to `languages/lunar-image-converter-<locale>.
 
 ## What stays stable
 
-From version 1.0.0 these will not change without a major version: the option `lunar_image_converter_settings` and its keys, the hidden post meta keys and status and reason values, the action `lunar_image_converter_converted`, the filter `lunar_image_converter_max_megapixels`, and the AJAX action and scope names used by the bulk converter. The hidden post meta keys include the one that remembers the old files of an image whose cleanup is not finished. Please keep them in mind when you propose a change.
+From version 1.0.0 these will not change without a major version: the option `lunar_image_converter_settings` and its keys, the hidden post meta keys and status and reason values, the user meta key of the saved upload notices, the REST field `lunar_image_converter` on attachments, the action `lunar_image_converter_converted`, the filter `lunar_image_converter_max_megapixels`, and the AJAX action and scope names used by the bulk converter. The hidden post meta keys include the one that remembers the old files of an image whose cleanup is not finished. Please keep them in mind when you propose a change.
+
+## Making a release
+
+Only the maintainer does this. The order matters: a release is built from a tag, and a tag points at one commit, so the version must be on `main` before the tag is made.
+
+1. Open a pull request that sets the new version in `lunar-image-converter.php` (the header and `LUNAR_IMAGE_CONVERTER_VERSION`), `package.json`, `package-lock.json`, and the `Project-Id-Version` of the `.pot` and `.po` files, recompiles the `.mo`, and moves the *Unreleased* entries of `CHANGELOG.md` under the new version. `tests/ReleaseSyncTest.php` fails when these numbers disagree.
+2. Merge it, then `git switch main` and `git pull`.
+3. Run `npm ci` and `npm run plugin-zip`.
+4. Create the tag on that commit (`git tag vX.Y.Z`, `git push origin vX.Y.Z`) and publish the GitHub Release from that tag with the zip attached.
+5. Open the zip and check that `Version:` in `lunar-image-converter.php` is the new number. The CI job *Release tag* compares the tag with the version in the files and fails when they differ, but it cannot see the zip.
 
 ## License
 

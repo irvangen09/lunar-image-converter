@@ -13,6 +13,15 @@ final class WpdbStub {
 
 	public string $options = 'wp_options';
 
+	public string $posts = 'wp_posts';
+
+	/**
+	 * Post content by ID.
+	 *
+	 * @var array<int, string>
+	 */
+	public array $contents = array();
+
 	/**
 	 * Option values by name.
 	 *
@@ -30,15 +39,19 @@ final class WpdbStub {
 	/**
 	 * Fills the placeholders with quoted values.
 	 *
-	 * @param string $query   Query with %s placeholders.
+	 * @param string $query   Query with %s and %d placeholders.
 	 * @param mixed  ...$args Values.
 	 */
 	public function prepare( string $query, ...$args ): string {
-		foreach ( $args as $arg ) {
-			$query = (string) preg_replace( '/%s/', "'" . addslashes( (string) $arg ) . "'", $query, 1 );
-		}
+		return (string) preg_replace_callback(
+			'/%([sd])/',
+			static function ( array $found ) use ( &$args ): string {
+				$arg = array_shift( $args );
 
-		return $query;
+				return 'd' === $found[1] ? (string) (int) $arg : "'" . addslashes( (string) $arg ) . "'";
+			},
+			$query
+		);
 	}
 
 	/**
@@ -54,6 +67,21 @@ final class WpdbStub {
 			}
 
 			$this->rows[ $m[1] ] = $m[2];
+
+			return 1;
+		}
+
+		$quoted = "'((?:[^'\\\\]|\\\\.)*)'";
+
+		if ( 1 === preg_match( '/^UPDATE wp_posts SET post_content = ' . $quoted . ' WHERE ID = (\d+) AND BINARY post_content = BINARY ' . $quoted . '$/s', $query, $m ) ) {
+			$id = (int) $m[2];
+
+			// BINARY: the old text must match byte for byte.
+			if ( ( $this->contents[ $id ] ?? null ) !== stripslashes( $m[3] ) ) {
+				return 0;
+			}
+
+			$this->contents[ $id ] = stripslashes( $m[1] );
 
 			return 1;
 		}
