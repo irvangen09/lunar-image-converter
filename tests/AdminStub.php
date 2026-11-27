@@ -59,18 +59,40 @@ final class AdminStub {
 	public static bool $ajax_nonce_ok = true;
 
 	/**
+	 * IDs of the posts whose cache was cleared, in order.
+	 *
+	 * @var int[]
+	 */
+	public static array $cleaned_posts = array();
+
+	/**
+	 * Nonce the stand-in for wp_create_nonce() returns.
+	 */
+	public static string $created_nonce = 'created-nonce';
+
+	/**
+	 * Inline scripts by handle.
+	 *
+	 * @var array<string, string>
+	 */
+	public static array $inline_scripts = array();
+
+	/**
 	 * Resets the state before a test.
 	 */
 	public static function reset(): void {
-		self::$user_id       = 1;
-		self::$blog_id       = 1;
-		self::$now           = 0;
-		self::$user_meta     = array();
-		self::$hooks         = array();
-		self::$rest_fields   = array();
-		self::$scripts       = array();
-		self::$can_edit      = true;
-		self::$valid_nonce   = 'good-nonce';
-		self::$ajax_nonce_ok = true;
+		self::$user_id        = 1;
+		self::$blog_id        = 1;
+		self::$now            = 0;
+		self::$user_meta      = array();
+		self::$hooks          = array();
+		self::$rest_fields    = array();
+		self::$scripts        = array();
+		self::$can_edit       = true;
+		self::$valid_nonce    = 'good-nonce';
+		self::$ajax_nonce_ok  = true;
+		self::$cleaned_posts  = array();
+		self::$created_nonce  = 'created-nonce';
+		self::$inline_scripts = array();
 	}
 }

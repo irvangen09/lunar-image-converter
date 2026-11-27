@@ -90,15 +90,17 @@ final class WpContentStore implements ContentStore {
 	 * {@inheritDoc}
 	 *
 	 * @param int    $id      Post ID.
+	 * @param string $old     Content the new content was made from.
 	 * @param string $content New content.
 	 */
-	public function update( int $id, string $content ): bool {
+	public function update( int $id, string $old, string $content ): bool {
 		global $wpdb;
 
-		// A direct update keeps the modified date and creates no revision: the text did not change.
-		$done = $wpdb->update( $wpdb->posts, array( 'post_content' => $content ), array( 'ID' => $id ), array( '%s' ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// A direct update keeps the modified date and creates no revision: the text did not change. The old text is
+		// compared byte for byte, because the default comparison ignores case and trailing spaces.
+		$done = $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->posts} SET post_content = %s WHERE ID = %d AND BINARY post_content = BINARY %s", $content, $id, $old ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- The table name is WordPress's own.
 
-		if ( false === $done ) {
+		if ( 1 !== $done ) {
 			return false;
 		}
 

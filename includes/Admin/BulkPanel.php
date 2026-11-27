@@ -47,7 +47,7 @@ final class BulkPanel {
 
 		wp_add_inline_script(
 			'lunar-image-converter-bulk',
-			'window.lunarImageConverterBulk = ' . wp_json_encode( $this->script_data() ) . ';',
+			'window.lunarImageConverterBulk = ' . wp_json_encode( $this->script_data(), JSON_HEX_TAG | JSON_HEX_AMP ) . ';',
 			'before'
 		);
 	}

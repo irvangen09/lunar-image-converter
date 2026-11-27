@@ -30,3 +30,4 @@ require_once __DIR__ . '/AdminStub.php';
 require_once __DIR__ . '/AjaxEnded.php';
 require_once __DIR__ . '/admin-functions.php';
 require_once __DIR__ . '/conversion-functions.php';
+require_once __DIR__ . '/content-functions.php';

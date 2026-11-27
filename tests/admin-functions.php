@@ -154,15 +154,42 @@ function wp_unslash( $value ) {
  * @param string   $src       Script URL.
  * @param string[] $deps      Script handles it needs.
  * @param string   $version   Version.
- * @param bool     $in_footer Whether it loads in the footer.
+ * @param bool|array<string, mixed> $in_footer Whether it loads in the footer, or the loading arguments.
  */
-function wp_enqueue_script( string $handle, string $src, array $deps, string $version, bool $in_footer ): void {
+function wp_enqueue_script( string $handle, string $src, array $deps, string $version, bool|array $in_footer ): void {
 	AdminStub::$scripts[ $handle ] = array(
 		'src'       => $src,
 		'deps'      => $deps,
 		'version'   => $version,
 		'in_footer' => $in_footer,
 	);
+}
+
+/**
+ * @param string $handle   Script handle.
+ * @param string $data     Script code.
+ * @param string $position Where it goes relative to the script.
+ */
+function wp_add_inline_script( string $handle, string $data, string $position = 'after' ): bool {
+	AdminStub::$inline_scripts[ $handle ] = $data;
+
+	return 'before' === $position || 'after' === $position;
+}
+
+/**
+ * @param string $action Nonce action.
+ */
+function wp_create_nonce( string $action ): string {
+	return '' === $action ? '' : AdminStub::$created_nonce;
+}
+
+/**
+ * @param mixed $data  Data.
+ * @param int   $flags Encoding flags.
+ * @return string|false
+ */
+function wp_json_encode( $data, int $flags = 0 ) {
+	return json_encode( $data, $flags );
 }
 
 /**

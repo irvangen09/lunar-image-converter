@@ -33,6 +33,13 @@ final class FakeContentStore implements ContentStore {
 	public array $failing = array();
 
 	/**
+	 * New content by post ID that someone saves right after find() returned, as an editor would.
+	 *
+	 * @var array<int, string>
+	 */
+	public array $edited = array();
+
+	/**
 	 * IDs of the posts that were saved, in order.
 	 *
 	 * @var int[]
@@ -81,11 +88,23 @@ final class FakeContentStore implements ContentStore {
 
 		ksort( $found );
 
-		return array_slice( $found, 0, $limit );
+		$found = array_slice( $found, 0, $limit );
+
+		foreach ( $this->edited as $id => $content ) {
+			$this->posts[ $id ]['content'] = $content;
+		}
+
+		$this->edited = array();
+
+		return $found;
 	}
 
-	public function update( int $id, string $content ): bool {
+	public function update( int $id, string $old, string $content ): bool {
 		if ( in_array( $id, $this->failing, true ) ) {
+			return false;
+		}
+
+		if ( ( $this->posts[ $id ]['content'] ?? null ) !== $old ) {
 			return false;
 		}
 

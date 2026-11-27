@@ -52,6 +52,11 @@ final class Pipeline {
 	public const MIN_SECONDS_LEFT = 10;
 
 	/**
+	 * MIME types of the converted files.
+	 */
+	public const TARGET_MIMES = array( 'image/webp', 'image/avif' );
+
+	/**
 	 * Settings toggle that allows each source type.
 	 */
 	public const SOURCE_TOGGLES = array(
@@ -110,7 +115,7 @@ final class Pipeline {
 			return $metadata;
 		}
 
-		$new_metadata = $this->switch_over( $attachment_id, $metadata, $plan, $written );
+		$new_metadata = $this->switch_over( $attachment_id, $metadata, $plan, $written, $in_use );
 
 		if ( null === $new_metadata ) {
 			return $metadata;
@@ -262,28 +267,57 @@ final class Pipeline {
 	 * @param array<string, mixed> $metadata      Old attachment metadata.
 	 * @param array<string, mixed> $plan          Result of plan().
 	 * @param array<string, mixed> $written       Result of write_files().
+	 * @param bool                 $in_use        Whether the image may already be used in content.
 	 * @return array<string, mixed>|null
 	 */
-	private function switch_over( int $attachment_id, array $metadata, array $plan, array $written ): ?array {
+	private function switch_over( int $attachment_id, array $metadata, array $plan, array $written, bool $in_use ): ?array {
 		$dir          = $plan['dir'];
 		$new_metadata = $this->new_metadata( $metadata, $written['names'], $plan['main'], $plan['dir_relative'], $dir, $plan['target'] );
 		$old_path     = $dir . '/' . $plan['main'];
 
 		try {
+			if ( $in_use ) {
+				// Saved before the switch: if the request dies right after it, a later run still knows which files are old.
+				$this->gateway->keep_files( $attachment_id, $this->path_map( $plan['dir_relative'], $written['names'], $plan['main'], $plan['extras'] ) );
+			}
+
 			if ( ! $this->gateway->switch_to( $attachment_id, $dir . '/' . $written['names'][ $plan['main'] ], $plan['target'] ) ) {
+				$this->forget_kept_files( $attachment_id, $in_use );
+
 				return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_UPDATE_FAILED, $written['created'] );
 			}
 
 			if ( ! $this->gateway->save_metadata( $attachment_id, $new_metadata ) ) {
 				$this->gateway->switch_to( $attachment_id, $old_path, $plan['source_mime'] );
+				$this->forget_kept_files( $attachment_id, $in_use );
 
 				return $this->abandon( $attachment_id, self::STATUS_FAILED, self::REASON_UPDATE_FAILED, $written['created'] );
 			}
 		} catch ( \Throwable ) {
+			$this->forget_kept_files( $attachment_id, $in_use );
+
 			return $this->undo_switch( $attachment_id, $metadata, $plan, $written['created'] );
 		}
 
 		return $new_metadata;
+	}
+
+	/**
+	 * Drops the list of old files saved before a switch that was undone.
+	 *
+	 * @param int  $attachment_id Attachment ID.
+	 * @param bool $in_use        Whether the list was saved.
+	 */
+	private function forget_kept_files( int $attachment_id, bool $in_use ): void {
+		if ( ! $in_use ) {
+			return;
+		}
+
+		$this->attempt(
+			function () use ( $attachment_id ): void {
+				$this->gateway->keep_files( $attachment_id, array() );
+			}
+		);
 	}
 
 	/**
@@ -412,15 +446,34 @@ final class Pipeline {
 	}
 
 	/**
+	 * Tells whether a run was interrupted right after the attachment was switched to its converted files.
+	 *
+	 * Such an image still has the `processing` status, but it already points at the new files, which are in the
+	 * list of old and new files saved before the switch.
+	 *
+	 * @param int $attachment_id Attachment ID.
+	 */
+	public function was_switched( int $attachment_id ): bool {
+		if ( self::STATUS_PROCESSING !== $this->gateway->status( $attachment_id ) ) {
+			return false;
+		}
+
+		return in_array( $this->gateway->relative_path( $attachment_id ), $this->gateway->kept_files( $attachment_id ), true );
+	}
+
+	/**
 	 * Finishes the cleanup of an image that was converted but whose old files were kept.
 	 *
 	 * Replaces the URLs again; only when that succeeds are the old files deleted and the image recorded as fully
-	 * converted. Otherwise nothing changes and a later run can try again. Does nothing for any other image.
+	 * converted. Otherwise nothing changes and a later run can try again. An image whose run was interrupted right
+	 * after the switch is finished the same way. Does nothing for any other image.
 	 *
 	 * @param int $attachment_id Attachment ID.
 	 */
 	public function resume( int $attachment_id ): void {
-		if ( self::STATUS_CONVERTED !== $this->gateway->status( $attachment_id ) || self::REASON_OLD_FILES_KEPT !== $this->gateway->reason( $attachment_id ) ) {
+		$kept = self::STATUS_CONVERTED === $this->gateway->status( $attachment_id ) && self::REASON_OLD_FILES_KEPT === $this->gateway->reason( $attachment_id );
+
+		if ( ! $kept && ! $this->was_switched( $attachment_id ) ) {
 			return;
 		}
 

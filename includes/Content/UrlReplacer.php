@@ -227,7 +227,7 @@ final class UrlReplacer {
 					return false;
 				}
 
-				if ( $updated !== $row['content'] && ! $this->store->update( $row['id'], $updated ) ) {
+				if ( $updated !== $row['content'] && ! $this->store->update( $row['id'], $row['content'], $updated ) ) {
 					return false;
 				}
 			}

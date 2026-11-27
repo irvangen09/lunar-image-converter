@@ -8,7 +8,10 @@
 namespace LunarImageConverter\Tests;
 
 use LunarImageConverter\Admin\BulkController;
+use LunarImageConverter\Admin\BulkPanel;
 use LunarImageConverter\Conversion\Pipeline;
+use LunarImageConverter\Settings\Settings;
+use LunarImageConverter\Support\Environment;
 use PHPUnit\Framework\TestCase;
 
 final class BulkScriptTest extends TestCase {
@@ -76,6 +79,25 @@ final class BulkScriptTest extends TestCase {
 		}
 
 		$this->assertEqualsCanonicalizing( $statuses, array_values( $this->constant( 'STATUS' ) ) );
+	}
+
+	public function test_the_data_in_the_page_cannot_end_the_script_tag(): void {
+		AdminStub::reset();
+
+		AdminStub::$created_nonce = '</script><script>alert(1)</script> & more';
+
+		try {
+			( new BulkPanel( new Settings(), new Environment() ) )->enqueue();
+
+			$code = AdminStub::$inline_scripts['lunar-image-converter-bulk'];
+		} finally {
+			AdminStub::reset();
+		}
+
+		$this->assertSame( 1, preg_match( '/^window\.lunarImageConverterBulk = (.*);$/s', $code, $json ) );
+		$this->assertStringNotContainsString( '<', $json[1] );
+		$this->assertStringNotContainsString( '&', $json[1] );
+		$this->assertSame( '</script><script>alert(1)</script> & more', json_decode( $json[1], true )['nonce'] );
 	}
 
 	public function test_the_script_reads_the_data_keys_that_the_panel_provides(): void {

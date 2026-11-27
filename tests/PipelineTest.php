@@ -1028,6 +1028,17 @@ final class PipelineTest extends TestCase {
 	/**
 	 * Converts an image in use while the content cannot be changed, then lets the content be changed.
 	 */
+	/**
+	 * Leaves the image as a run that died right after the switch would: new files in use, status `processing`.
+	 */
+	private function die_after_the_switch(): void {
+		$this->gateway->record( 7, 'processing', '', 0 );
+
+		$this->gateway->events       = array();
+		$this->gateway->replacements = array();
+		$this->gateway->announced    = array();
+	}
+
 	private function kept_image(): void {
 		$this->gateway->replace_succeeds = false;
 
@@ -1081,6 +1092,89 @@ final class PipelineTest extends TestCase {
 		$this->assertSame( array(), $this->gateway->replacements );
 		$this->assertFileExists( $this->dir . '/photo.jpg' );
 		$this->assertSame( 'old_files_kept', $this->gateway->records[7]['reason'] );
+	}
+
+	public function test_the_old_files_are_listed_before_the_attachment_is_switched(): void {
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$first = static function ( array $events, string $prefix ): int {
+			foreach ( $events as $index => $event ) {
+				if ( str_starts_with( $event, $prefix ) ) {
+					return $index;
+				}
+			}
+
+			return -1;
+		};
+
+		$keep   = $first( $this->gateway->events, 'keep:' );
+		$switch = $first( $this->gateway->events, 'switch:' );
+
+		$this->assertTrue( $keep >= 0 && $switch >= 0 && $keep < $switch );
+	}
+
+	public function test_a_new_upload_does_not_list_old_files(): void {
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS );
+
+		foreach ( $this->gateway->events as $event ) {
+			$this->assertFalse( str_starts_with( $event, 'keep:' ) );
+		}
+	}
+
+	public function test_a_switch_that_fails_leaves_no_list_of_old_files_behind(): void {
+		$this->gateway->switch_succeeds = false;
+
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$this->assertSame( array(), $this->gateway->kept );
+		$this->assertSame( 'failed', $this->gateway->records[7]['status'] );
+	}
+
+	public function test_an_error_during_the_switch_leaves_no_list_of_old_files_behind(): void {
+		$this->gateway->throwing = array( 'switch_to' );
+
+		$this->pipeline()->convert( 7, $this->attach( 7 ), Settings::DEFAULTS, true );
+
+		$this->assertSame( array(), $this->gateway->kept );
+		$this->assertSame( 'failed', $this->gateway->records[7]['status'] );
+	}
+
+	public function test_a_run_that_died_right_after_the_switch_is_finished_later(): void {
+		$this->kept_image();
+		$this->die_after_the_switch();
+
+		$this->assertTrue( $this->pipeline()->was_switched( 7 ) );
+
+		$this->pipeline()->resume( 7 );
+
+		$this->assertFileDoesNotExist( $this->dir . '/photo.jpg' );
+		$this->assertFileExists( $this->dir . '/photo.webp' );
+		$this->assertSame( 'converted', $this->gateway->records[7]['status'] );
+		$this->assertSame( '', $this->gateway->records[7]['reason'] );
+		$this->assertSame( array(), $this->gateway->kept );
+		$this->assertSame( '2026/11/photo.webp', $this->gateway->announced[7]['2026/11/photo.jpg'] );
+	}
+
+	public function test_a_run_that_died_before_the_switch_is_not_taken_for_a_switched_one(): void {
+		$this->attach( 7 );
+
+		$this->gateway->kept = array( 7 => array( '2026/11/photo.jpg' => '2026/11/photo.webp' ) );
+		$this->gateway->record( 7, 'processing', '', 0 );
+
+		$this->gateway->events = array();
+
+		$this->assertFalse( $this->pipeline()->was_switched( 7 ) );
+
+		$this->pipeline()->resume( 7 );
+
+		$this->assertSame( array(), $this->gateway->events );
+		$this->assertFileExists( $this->dir . '/photo.jpg' );
+	}
+
+	public function test_an_image_that_is_not_processing_is_never_taken_for_a_switched_one(): void {
+		$this->kept_image();
+
+		$this->assertFalse( $this->pipeline()->was_switched( 7 ) );
 	}
 
 	public function test_only_an_image_with_kept_files_is_resumed(): void {

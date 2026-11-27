@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Replacing an image address in a post no longer overwrites a change someone saved in the meantime; when the post changed, the old files are kept and a later Bulk run finishes the cleanup.
+- An image whose conversion was interrupted right after it was switched to the new files is now found by Bulk Generate (Try again) and finished, instead of staying "Interrupted" out of reach.
+- The data passed to the Bulk Generate script can no longer end the script tag early, whatever a translation contains.
+
+### Changed
+
+- The README and CONTRIBUTING list everything that stays stable, and CONTRIBUTING describes how a release is made. A new CI check compares a release tag with the version in the files.
+
 ## [1.0.0] - 2026-11-24
 
 First public release.
