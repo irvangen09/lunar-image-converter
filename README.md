@@ -2,7 +2,7 @@
 
 A WordPress plugin that converts JPEG and PNG images to WebP or AVIF, replaces the originals, and updates the image addresses in your content.
 
-> **Status: 1.0.0, the first public release.** It is built for one site and published openly on GitHub. It is not on WordPress.org and no user support is promised. See [Status and testing](#status-and-testing).
+> **Status: 1.0.1.** It is built for one site and published openly on GitHub. It is not on WordPress.org and no user support is promised. See [Status and testing](#status-and-testing).
 
 ## What it does
 
